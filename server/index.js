@@ -4,6 +4,7 @@ const io = require('socket.io')(server, {
 })
 const port = process.env.PORT || 4000
 server.listen(port)
+const uuid = require('uuid/v4')
 
 console.log('start listening at port ' + port)
 
@@ -15,6 +16,11 @@ io.on('connection', socket => {
   log('Join')
 
   socket.join('default room')
+
+  socket.on('chat-msg', msg => {
+    log('chat-msg: ' + msg)
+    io.emit('chat-msg', { id: uuid(), body: msg })
+  })
 
   socket.on('disconnect', () => {
     log('Leave')
