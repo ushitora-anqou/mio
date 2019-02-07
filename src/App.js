@@ -30,9 +30,10 @@ class ChatWindow extends Component {
     super(props)
 
     this.state = {
-      history: [],
-      input: ''
+      history: []
     }
+
+    this.inputMsg = React.createRef()
   }
 
   onChatMsg = msg => {
@@ -49,10 +50,13 @@ class ChatWindow extends Component {
     socket.off('chat-msg', this.onChatMsg)
   }
 
-  onSend = () => {
-    if (this.state.input !== '') {
-      socket.emit('chat-msg', this.state.input)
-      this.setState({ input: '' })
+  handleSubmit = e => {
+    e.preventDefault()
+
+    const body = this.inputMsg.current.value
+    if (body !== '') {
+      socket.emit('chat-msg', body)
+      this.inputMsg.current.value = ''
     }
   }
 
@@ -68,15 +72,10 @@ class ChatWindow extends Component {
             ))}
           </tbody>
         </table>
-        <input
-          type='text'
-          value={this.state.input}
-          onChange={e => this.setState({ input: e.target.value })}
-          onKeyPress={e => {
-            if (e.which === 13) this.onSend()
-          }}
-        />
-        <button onClick={this.onSend}>Send</button>
+        <form onSubmit={this.handleSubmit}>
+          <input type='text' ref={this.inputMsg} />
+          <button type='submit'>Send</button>
+        </form>
       </div>
     )
   }
