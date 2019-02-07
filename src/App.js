@@ -19,6 +19,10 @@ function readFileAsync (file) {
   })
 }
 
+function isEmpty (obj) {
+  return Object.keys(obj).length === 0
+}
+
 const socket = io(config.server_uri)
 
 class ChatWindow extends Component {
@@ -183,7 +187,7 @@ class ShowResult extends Component {
 
     this.state = {
       judging: props.judge,
-      entries: []
+      entries: {}
     }
   }
 
@@ -199,7 +203,7 @@ class ShowResult extends Component {
 
   onQuizAnswer = msg => {
     this.setState((state, props) => {
-      return update(state, { entries: { $push: [msg] } })
+      return update(state, { entries: { $merge: { [msg.uid]: msg } } })
     })
   }
 
@@ -216,22 +220,69 @@ class ShowResult extends Component {
     changeScene(this, WaitMusic, {})
   }
 
+  onClickOk = uid => {
+    if (this.state.judging)
+      this.setState((state, props) =>
+        update(state, { entries: { [uid]: { judge: { $set: true } } } })
+      )
+  }
+
+  onClickNg = uid => {
+    if (this.state.judging)
+      this.setState((state, props) =>
+        update(state, { entries: { [uid]: { judge: { $set: false } } } })
+      )
+  }
+
   render () {
     const entries = this.state.entries
     return (
       <div className='ShowResult'>
-        {entries.length === 0 ? (
+        {isEmpty(entries) ? (
           <p>Waiting for the result</p>
         ) : (
           <div>
             <table>
               <tbody>
-                {entries.map(entry => (
-                  <tr key={entry.uid}>
-                    <td>{entry.uid}</td>
-                    <td>{entry.answer}</td>
-                  </tr>
-                ))}
+                {Object.keys(entries)
+                  .sort()
+                  .map(uid => {
+                    const entry = entries[uid]
+                    return (
+                      <tr key={entry.uid}>
+                        <td>{entry.uid}</td>
+                        <td>{entry.answer}</td>
+                        <td>
+                          <label>
+                            <input
+                              type='radio'
+                              name={entry.uid}
+                              checked={entry.judge === true}
+                              onChange={e => {
+                                return this.onClickOk(entry.uid)
+                              }}
+                            />
+                            <span role='img' aria-label='check'>
+                              ✔️
+                            </span>
+                          </label>
+                          <label>
+                            <input
+                              type='radio'
+                              name={entry.uid}
+                              checked={entry.judge === false}
+                              onChange={e => {
+                                return this.onClickNg(entry.uid)
+                              }}
+                            />
+                            <span role='img' aria-label='x'>
+                              ❌
+                            </span>
+                          </label>
+                        </td>
+                      </tr>
+                    )
+                  })}
               </tbody>
             </table>
             {this.state.judging && (
