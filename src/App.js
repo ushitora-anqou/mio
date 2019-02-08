@@ -4,6 +4,8 @@ import update from 'immutability-helper'
 import './App.css'
 import { config } from './config'
 
+const AudioContext = window.AudioContext || window.webkitAudioContext
+
 // thanks to https://simon-schraeder.de/posts/filereader-async/
 function readFileAsync (file) {
   return new Promise((resolve, reject) => {
@@ -139,9 +141,14 @@ class PlayMusic extends Component {
 
   onClickStart = () => {
     this.setState({ playing: true })
+    this.audioCtx = new AudioContext()
+    this.startTime = this.audioCtx.currentTime
   }
 
   onClickStop = () => {
+    socket.emit('quiz-time', {
+      time: this.audioCtx.currentTime - this.startTime
+    })
     changeScene(this, InputAnswer, {})
   }
 
@@ -191,18 +198,30 @@ class ShowResult extends Component {
   }
 
   componentDidMount () {
+    socket.on('quiz-time', this.onQuizTime)
     socket.on('quiz-answer', this.onQuizAnswer)
     socket.on('quiz-result', this.onQuizResult)
   }
 
   componentWillUnmount () {
+    socket.off('quiz-time', this.onQuizTime)
     socket.off('quiz-answer', this.onQuizAnswer)
     socket.off('quiz-result', this.onQuizResult)
   }
 
+  onQuizTime = msg => {
+    this.setState((state, props) => {
+      return update(state, {
+        entries: { $merge: { [msg.uid]: { uid: msg.uid, time: msg.time } } }
+      })
+    })
+  }
+
   onQuizAnswer = msg => {
     this.setState((state, props) => {
-      return update(state, { entries: { $merge: { [msg.uid]: msg } } })
+      return update(state, {
+        entries: { [msg.uid]: { $merge: { answer: msg.answer } } }
+      })
     })
   }
 
@@ -213,6 +232,20 @@ class ShowResult extends Component {
   onSendJudge = () => {
     socket.emit('quiz-result', this.state.entries)
     this.setState({ judging: false })
+  }
+
+  canSendJudge = () => {
+    if (!this.state.judging) return false
+    const entries = this.state.entries
+    if (
+      !Object.keys(entries).every(
+        uid =>
+          entries[uid].hasOwnProperty('answer') &&
+          entries[uid].hasOwnProperty('judge')
+      )
+    )
+      return false
+    return true
   }
 
   onSendDone = () => {
@@ -244,47 +277,56 @@ class ShowResult extends Component {
             <table>
               <tbody>
                 {Object.keys(entries)
-                  .sort()
+                  .sort(
+                    (lhs_uid, rhs_uid) =>
+                      entries[lhs_uid].time - entries[rhs_uid].time
+                  )
                   .map(uid => {
                     const entry = entries[uid]
                     return (
                       <tr key={entry.uid}>
                         <td>{entry.uid}</td>
+                        <td>{entry.time}</td>
                         <td>{entry.answer}</td>
-                        <td>
-                          <label>
-                            <input
-                              type='radio'
-                              name={entry.uid}
-                              checked={entry.judge === true}
-                              onChange={e => {
-                                return this.onClickOk(entry.uid)
-                              }}
-                            />
-                            <span role='img' aria-label='check'>
-                              ✔️
-                            </span>
-                          </label>
-                          <label>
-                            <input
-                              type='radio'
-                              name={entry.uid}
-                              checked={entry.judge === false}
-                              onChange={e => {
-                                return this.onClickNg(entry.uid)
-                              }}
-                            />
-                            <span role='img' aria-label='x'>
-                              ❌
-                            </span>
-                          </label>
-                        </td>
+                        {entry.hasOwnProperty('time') &&
+                        entry.hasOwnProperty('answer') ? (
+                          <td>
+                            <label>
+                              <input
+                                type='radio'
+                                name={entry.uid}
+                                checked={entry.judge === true}
+                                onChange={e => {
+                                  return this.onClickOk(entry.uid)
+                                }}
+                              />
+                              <span role='img' aria-label='check'>
+                                ✔️
+                              </span>
+                            </label>
+                            <label>
+                              <input
+                                type='radio'
+                                name={entry.uid}
+                                checked={entry.judge === false}
+                                onChange={e => {
+                                  return this.onClickNg(entry.uid)
+                                }}
+                              />
+                              <span role='img' aria-label='x'>
+                                ❌
+                              </span>
+                            </label>
+                          </td>
+                        ) : (
+                          <td />
+                        )}
                       </tr>
                     )
                   })}
               </tbody>
             </table>
-            {this.state.judging && (
+            {this.canSendJudge() && (
               <button onClick={this.onSendJudge}>Send</button>
             )}
             {!this.state.judging && (

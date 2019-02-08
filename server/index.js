@@ -53,6 +53,15 @@ io.on('connection', socket => {
     socket.broadcast.to(roomid).emit('quiz-music', msg)
   })
 
+  socket.on('quiz-time', msg => {
+    log('quiz-time: ' + msg.time)
+
+    io.to(db.user[room.master].sid).emit('quiz-time', {
+      uid: uid,
+      time: msg.time
+    })
+  })
+
   socket.on('quiz-answer', msg => {
     log('quiz-answer: ' + msg.answer)
 
