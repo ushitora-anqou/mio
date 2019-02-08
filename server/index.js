@@ -1,91 +1,105 @@
+const uuid = require('uuid/v4')
+const fs = require('fs')
+
 const server = require('http').createServer()
 const io = require('socket.io')(server, {
   serveClient: false
 })
 const port = process.env.PORT || 4000
 server.listen(port)
-const uuid = require('uuid/v4')
+
+function fileExists (path) {
+  try {
+    fs.statSync(path)
+    return true
+  } catch (err) {
+    return false
+  }
+}
 
 console.log('start listening at port ' + port)
 
-db = {
-  room: {},
-  user: {},
-  socket: {}
+const user2sid = {}
+const roomid = 'default room'
+const room = fileExists('data.json')
+  ? JSON.parse(fs.readFileSync('data.json'))
+  : { master: null }
+
+const shutdownGracefully = () => {
+  fs.writeFileSync('data.json', JSON.stringify(room))
+  process.exit(0)
 }
 
-const roomid = 'default room'
-db.room[roomid] = {
-  stage: 0,
-  master: null
-}
+process.on('SIGTERM', shutdownGracefully)
+process.on('SIGINT', shutdownGracefully)
 
 io.on('connection', socket => {
   const log = msg => {
     console.log('[' + socket.id + '] ' + msg)
   }
 
-  const uid = uuid()
-  const room = db.room[roomid]
-  db.user[uid] = { sid: socket.id }
-  db.socket[socket.id] = { uid: uid }
-
+  socket.join(roomid)
   log('Join in ' + roomid)
 
-  socket.join(roomid)
-
-  socket.on('chat-msg', (msg, cb) => {
-    log('chat-msg: ' + msg)
-    io.to(roomid).emit('chat-msg', { id: uuid(), body: msg })
-    cb()
+  socket.on('issue-uid', (x, cb) => {
+    const uid = uuid()
+    const password = uuid()
+    cb(uid, password)
   })
 
-  socket.on('quiz-music', (msg, cb) => {
-    //if (room.stage != 0) {
-    //  log('invalid stage')
-    //  return
-    //}
+  socket.emit('auth', {}, (uid, password) => {
+    // TODO: check uid and password are correct
+    log('auth: ' + uid)
 
-    log('quiz-music: ' + msg.buf.length)
+    user2sid[uid] = socket.id
 
-    room.stage = 1
-    room.master = uid
-
-    socket.broadcast.to(roomid).emit('quiz-music', msg)
-    cb()
-  })
-
-  socket.on('quiz-time', (msg, cb) => {
-    log('quiz-time: ' + msg.time)
-
-    io.to(db.user[room.master].sid).emit('quiz-time', {
-      uid: uid,
-      time: msg.time
+    socket.on('chat-msg', (msg, cb) => {
+      log('chat-msg: ' + msg)
+      io.to(roomid).emit('chat-msg', { id: uuid(), body: msg })
+      cb()
     })
 
-    cb()
-  })
+    socket.on('quiz-music', (msg, cb) => {
+      log('quiz-music: ' + msg.buf.length)
 
-  socket.on('quiz-answer', (msg, cb) => {
-    log('quiz-answer: ' + msg.answer)
+      room.master = uid
 
-    io.to(db.user[room.master].sid).emit('quiz-answer', {
-      uid: uid,
-      answer: msg.answer
+      socket.broadcast.to(roomid).emit('quiz-music', msg)
+      cb()
     })
 
-    cb()
-  })
+    socket.on('quiz-time', (msg, cb) => {
+      log('quiz-time: ' + msg.time)
 
-  socket.on('quiz-result', (msg, cb) => {
-    log('quiz-result: ' + msg)
+      io.to(user2sid[room.master]).emit('quiz-time', {
+        uid: uid,
+        time: msg.time
+      })
 
-    socket.broadcast.to(roomid).emit('quiz-result', msg)
+      cb()
+    })
 
-    cb()
-  })
+    socket.on('quiz-answer', (msg, cb) => {
+      log('quiz-answer: ' + msg.answer)
 
-  socket.on('disconnect', () => {
-    log('Leave')
+      io.to(user2sid[room.master]).emit('quiz-answer', {
+        uid: uid,
+        answer: msg.answer
+      })
+
+      cb()
+    })
+
+    socket.on('quiz-result', (msg, cb) => {
+      log('quiz-result: ' + JSON.stringify(msg))
+
+      socket.broadcast.to(roomid).emit('quiz-result', msg)
+
+      cb()
+    })
+
+    socket.on('disconnect', () => {
+      log('Leave')
+    })
   })
 })

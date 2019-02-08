@@ -152,10 +152,9 @@ class PlayMusic extends Component {
       {
         time: this.audioCtx.currentTime - this.startTime
       },
-      () => {
-        changeScene(this, InputAnswer, {})
-      }
+      () => {}
     )
+    changeScene(this, InputAnswer, {})
   }
 
   render () {
@@ -252,6 +251,7 @@ class ShowResult extends Component {
     if (
       !Object.keys(entries).every(
         uid =>
+          entries[uid].hasOwnProperty('time') &&
           entries[uid].hasOwnProperty('answer') &&
           entries[uid].hasOwnProperty('judge')
       )
@@ -373,6 +373,20 @@ class App extends Component {
   constructor (props) {
     super(props)
     this.state = {}
+
+    socket.on('auth', (x, cb) => {
+      if (this.hasOwnProperty('uid')) {
+        cb(this.uid, this.password)
+        return
+      }
+
+      // get uid and password
+      socket.emit('issue-uid', {}, (uid, password) => {
+        this.uid = uid
+        this.password = password
+        cb(uid, password)
+      })
+    })
   }
 
   render () {
