@@ -57,8 +57,9 @@ class ChatWindow extends Component {
 
     const body = this.inputMsg.current.value
     if (body !== '') {
-      socket.emit('chat-msg', body)
-      this.inputMsg.current.value = ''
+      socket.emit('chat-msg', body, () => {
+        this.inputMsg.current.value = ''
+      })
     }
   }
 
@@ -112,10 +113,10 @@ class WaitMusic extends Component {
     const file = this.inputMusicFile.current.files[0]
 
     readFileAsync(file).then(buf => {
-      socket.emit('quiz-music', { buf: buf })
+      socket.emit('quiz-music', { buf: buf }, () => {
+        changeScene(this, ShowResult, { judge: true })
+      })
     })
-
-    changeScene(this, ShowResult, { judge: true })
   }
 
   render () {
@@ -146,10 +147,15 @@ class PlayMusic extends Component {
   }
 
   onClickStop = () => {
-    socket.emit('quiz-time', {
-      time: this.audioCtx.currentTime - this.startTime
-    })
-    changeScene(this, InputAnswer, {})
+    socket.emit(
+      'quiz-time',
+      {
+        time: this.audioCtx.currentTime - this.startTime
+      },
+      () => {
+        changeScene(this, InputAnswer, {})
+      }
+    )
   }
 
   render () {
@@ -173,8 +179,13 @@ class InputAnswer extends Component {
   }
 
   onSend = () => {
-    socket.emit('quiz-answer', { answer: this.inputAnswer.current.value })
-    changeScene(this, ShowResult, { judge: false })
+    socket.emit(
+      'quiz-answer',
+      { answer: this.inputAnswer.current.value },
+      () => {
+        changeScene(this, ShowResult, { judge: false })
+      }
+    )
   }
 
   render () {
@@ -230,8 +241,9 @@ class ShowResult extends Component {
   }
 
   onSendJudge = () => {
-    socket.emit('quiz-result', this.state.entries)
-    this.setState({ judging: false })
+    socket.emit('quiz-result', this.state.entries, () => {
+      this.setState({ judging: false })
+    })
   }
 
   canSendJudge = () => {

@@ -34,12 +34,13 @@ io.on('connection', socket => {
 
   socket.join(roomid)
 
-  socket.on('chat-msg', msg => {
+  socket.on('chat-msg', (msg, cb) => {
     log('chat-msg: ' + msg)
     io.to(roomid).emit('chat-msg', { id: uuid(), body: msg })
+    cb()
   })
 
-  socket.on('quiz-music', msg => {
+  socket.on('quiz-music', (msg, cb) => {
     //if (room.stage != 0) {
     //  log('invalid stage')
     //  return
@@ -51,30 +52,37 @@ io.on('connection', socket => {
     room.master = uid
 
     socket.broadcast.to(roomid).emit('quiz-music', msg)
+    cb()
   })
 
-  socket.on('quiz-time', msg => {
+  socket.on('quiz-time', (msg, cb) => {
     log('quiz-time: ' + msg.time)
 
     io.to(db.user[room.master].sid).emit('quiz-time', {
       uid: uid,
       time: msg.time
     })
+
+    cb()
   })
 
-  socket.on('quiz-answer', msg => {
+  socket.on('quiz-answer', (msg, cb) => {
     log('quiz-answer: ' + msg.answer)
 
     io.to(db.user[room.master].sid).emit('quiz-answer', {
       uid: uid,
       answer: msg.answer
     })
+
+    cb()
   })
 
-  socket.on('quiz-result', msg => {
+  socket.on('quiz-result', (msg, cb) => {
     log('quiz-result: ' + msg)
 
     socket.broadcast.to(roomid).emit('quiz-result', msg)
+
+    cb()
   })
 
   socket.on('disconnect', () => {
