@@ -147,14 +147,9 @@ class PlayMusic extends Component {
   }
 
   onClickStop = () => {
-    socket.emit(
-      'quiz-time',
-      {
-        time: this.audioCtx.currentTime - this.startTime
-      },
-      () => {}
-    )
-    changeScene(this, InputAnswer, {})
+    changeScene(this, InputAnswer, {
+      time: this.audioCtx.currentTime - this.startTime
+    })
   }
 
   render () {
@@ -180,7 +175,7 @@ class InputAnswer extends Component {
   onSend = () => {
     socket.emit(
       'quiz-answer',
-      { answer: this.inputAnswer.current.value },
+      { time: this.props.time, answer: this.inputAnswer.current.value },
       () => {
         changeScene(this, ShowResult, { judge: false })
       }
@@ -208,29 +203,23 @@ class ShowResult extends Component {
   }
 
   componentDidMount () {
-    socket.on('quiz-time', this.onQuizTime)
     socket.on('quiz-answer', this.onQuizAnswer)
     socket.on('quiz-result', this.onQuizResult)
   }
 
   componentWillUnmount () {
-    socket.off('quiz-time', this.onQuizTime)
     socket.off('quiz-answer', this.onQuizAnswer)
     socket.off('quiz-result', this.onQuizResult)
-  }
-
-  onQuizTime = msg => {
-    this.setState((state, props) => {
-      return update(state, {
-        entries: { $merge: { [msg.uid]: { uid: msg.uid, time: msg.time } } }
-      })
-    })
   }
 
   onQuizAnswer = msg => {
     this.setState((state, props) => {
       return update(state, {
-        entries: { [msg.uid]: { $merge: { answer: msg.answer } } }
+        entries: {
+          $merge: {
+            [msg.uid]: { uid: msg.uid, time: msg.time, answer: msg.answer }
+          }
+        }
       })
     })
   }

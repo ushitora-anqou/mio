@@ -68,22 +68,12 @@ io.on('connection', socket => {
       cb()
     })
 
-    socket.on('quiz-time', (msg, cb) => {
-      log('quiz-time: ' + msg.time)
-
-      io.to(user2sid[room.master]).emit('quiz-time', {
-        uid: uid,
-        time: msg.time
-      })
-
-      cb()
-    })
-
     socket.on('quiz-answer', (msg, cb) => {
       log('quiz-answer: ' + msg.answer)
 
       io.to(user2sid[room.master]).emit('quiz-answer', {
         uid: uid,
+        time: msg.time,
         answer: msg.answer
       })
 
