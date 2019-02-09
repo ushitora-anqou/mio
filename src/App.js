@@ -1,4 +1,11 @@
 import React, { Component } from 'react'
+import {
+  BrowserRouter as Router,
+  Route,
+  Link,
+  Switch,
+  Redirect
+} from 'react-router-dom'
 import io from 'socket.io-client'
 import update from 'immutability-helper'
 import './App.css'
@@ -25,7 +32,17 @@ function isEmpty (obj) {
   return Object.keys(obj).length === 0
 }
 
-const socket = io(config.server_uri)
+function fallback (fn, fallback) {
+  try {
+    return fn()
+  } catch (e) {
+    return fallback
+  }
+}
+
+function newSocket () {
+  return io(config.server_uri)
+}
 
 class ChatWindow extends Component {
   constructor (props) {
@@ -45,11 +62,11 @@ class ChatWindow extends Component {
   }
 
   componentDidMount () {
-    socket.on('chat-msg', this.onChatMsg)
+    this.props.socket.on('chat-msg', this.onChatMsg)
   }
 
   componentWillUnmount () {
-    socket.off('chat-msg', this.onChatMsg)
+    this.props.socket.off('chat-msg', this.onChatMsg)
   }
 
   handleSubmit = e => {
@@ -57,8 +74,8 @@ class ChatWindow extends Component {
 
     const body = this.inputMsg.current.value
     if (body !== '') {
-      socket.emit('chat-msg', body, () => {
-        this.inputMsg.current.value = ''
+      this.props.socket.emit('chat-msg', body, status => {
+        if (status === 'ok') this.inputMsg.current.value = ''
       })
     }
   }
@@ -86,7 +103,12 @@ class ChatWindow extends Component {
 
 function changeScene (self, SceneComponent, props) {
   self.props.changeScene(
-    <SceneComponent changeScene={self.props.changeScene} {...props} />
+    <SceneComponent
+      changeScene={self.props.changeScene}
+      master={self.props.master}
+      socket={self.props.socket}
+      {...props}
+    />
   )
 }
 
@@ -102,28 +124,37 @@ class WaitMusic extends Component {
   }
 
   componentDidMount () {
-    socket.on('quiz-music', this.onQuizMusic)
+    this.props.socket.on('quiz-music', this.onQuizMusic)
   }
 
   componentWillUnmount () {
-    socket.off('quiz-music', this.onQuizMusic)
+    this.props.socket.off('quiz-music', this.onQuizMusic)
   }
 
-  onClickSendMusic = () => {
+  onSendMusic = e => {
+    e.preventDefault()
     const file = this.inputMusicFile.current.files[0]
 
-    readFileAsync(file).then(buf => {
-      socket.emit('quiz-music', { buf: buf }, () => {
-        changeScene(this, ShowResult, { judge: true })
+    readFileAsync(file)
+      .then(buf => {
+        this.props.socket.emit('quiz-music', { buf: buf }, status => {
+          if (status === 'ok') changeScene(this, ShowResult, { judge: true })
+        })
       })
-    })
+      .catch(err => {
+        alert("Can't read the file: not exists?")
+      })
   }
 
   render () {
     return (
       <div className='WaitMusic'>
-        <input type='file' ref={this.inputMusicFile} />
-        <button onClick={this.onClickSendMusic}>Send</button>
+        {this.props.master && (
+          <form onSubmit={this.onSendMusic}>
+            <input type='file' ref={this.inputMusicFile} />
+            <button type='submit'>Send</button>
+          </form>
+        )}
         <p>Waiting music</p>
       </div>
     )
@@ -173,11 +204,11 @@ class InputAnswer extends Component {
   }
 
   onSend = () => {
-    socket.emit(
+    this.props.socket.emit(
       'quiz-answer',
       { time: this.props.time, answer: this.inputAnswer.current.value },
-      () => {
-        changeScene(this, ShowResult, { judge: false })
+      status => {
+        if (status === 'ok') changeScene(this, ShowResult, { judge: false })
       }
     )
   }
@@ -203,13 +234,13 @@ class ShowResult extends Component {
   }
 
   componentDidMount () {
-    socket.on('quiz-answer', this.onQuizAnswer)
-    socket.on('quiz-result', this.onQuizResult)
+    this.props.socket.on('quiz-answer', this.onQuizAnswer)
+    this.props.socket.on('quiz-result', this.onQuizResult)
   }
 
   componentWillUnmount () {
-    socket.off('quiz-answer', this.onQuizAnswer)
-    socket.off('quiz-result', this.onQuizResult)
+    this.props.socket.off('quiz-answer', this.onQuizAnswer)
+    this.props.socket.off('quiz-result', this.onQuizResult)
   }
 
   onQuizAnswer = msg => {
@@ -229,7 +260,7 @@ class ShowResult extends Component {
   }
 
   onSendJudge = () => {
-    socket.emit('quiz-result', this.state.entries, () => {
+    this.props.socket.emit('quiz-result', this.state.entries, () => {
       this.setState({ judging: false })
     })
   }
@@ -345,7 +376,13 @@ class SceneView extends Component {
     super(props)
 
     this.state = {
-      scene: <WaitMusic changeScene={this.changeScene} />
+      scene: (
+        <WaitMusic
+          changeScene={this.changeScene}
+          socket={this.props.socket}
+          master={this.props.master}
+        />
+      )
     }
   }
 
@@ -358,32 +395,145 @@ class SceneView extends Component {
   }
 }
 
-class App extends Component {
+class QuizRoom extends Component {
   constructor (props) {
     super(props)
-    this.state = {}
+    this.state = {
+      established: null // connecting
+    }
+    this.roomid = props.roomid
 
-    socket.on('auth', (x, cb) => {
+    this.master = props.master
+    if (this.master) {
+      this.uid = props.uid
+      this.password = props.password
+    }
+
+    this.socket = newSocket()
+    this.socket.on('auth', (x, cb) => {
       if (this.hasOwnProperty('uid')) {
-        cb(this.uid, this.password)
+        cb(this.uid, this.password, this.roomid)
         return
       }
 
       // get uid and password
-      socket.emit('issue-uid', {}, (uid, password) => {
-        this.uid = uid
-        this.password = password
-        cb(uid, password)
-      })
+      this.socket.emit(
+        'issue-uid',
+        { roomid: this.roomid },
+        (status, uid, password) => {
+          if (status !== 'ok') {
+            this.setState({ established: false }) // not found
+            return
+          }
+
+          this.uid = uid
+          this.password = password
+          cb(uid, password, this.roomid)
+        }
+      )
+    })
+    this.socket.on('auth-result', ({ status }) => {
+      this.setState({ established: status === 'ok' })
     })
   }
 
   render () {
+    if (this.state.established === null) {
+      return (
+        <div className='QuizRoom'>
+          <h1>Hello holo</h1>
+          <p>Connecting...</p>
+        </div>
+      )
+    }
+
+    if (this.state.established === false) {
+      return <Route component={NoMatch} />
+    }
+
     return (
-      <div className='App'>
+      <div className='QuizRoom'>
         <h1>Hello holo</h1>
-        <SceneView />
-        <ChatWindow />
+        <SceneView master={this.master} socket={this.socket} />
+        <ChatWindow socket={this.socket} />
+      </div>
+    )
+  }
+}
+
+const App = () => (
+  <Router>
+    <div className='App'>
+      <Switch>
+        <Route exact path='/' component={Home} />
+        <Route exact path='/create-room' component={CreateRoom} />
+        <Route path='/room/:roomid' component={Room} />
+        <Route component={NoMatch} />
+      </Switch>
+    </div>
+  </Router>
+)
+
+const Home = () => (
+  <div>
+    <h1>Hello holo</h1>
+    <Link to='/create-room'>Create a room to play</Link>
+  </div>
+)
+
+const NoMatch = ({ location }) => (
+  <div>
+    <h1>404 Not Found</h1>
+    <p>
+      <code>{location.pathname}</code> not found
+    </p>
+  </div>
+)
+
+const Room = ({ match, location }) =>
+  location.state ? (
+    <QuizRoom roomid={match.params.roomid} {...location.state} />
+  ) : (
+    <QuizRoom roomid={match.params.roomid} master={false} />
+  )
+
+class CreateRoom extends Component {
+  constructor (props) {
+    super(props)
+
+    this.state = {
+      redirect: false
+    }
+
+    this.socket = newSocket()
+  }
+
+  onSubmit = e => {
+    e.preventDefault()
+    this.socket.emit('create-room', {}, (uid, password, roomid) => {
+      this.uid = uid
+      this.password = password
+      this.roomid = roomid
+      this.setState({ redirect: true })
+    })
+  }
+
+  render () {
+    if (this.state.redirect)
+      return (
+        <Redirect
+          to={{
+            pathname: '/room/' + this.roomid,
+            state: { uid: this.uid, password: this.password, master: true }
+          }}
+        />
+      )
+
+    return (
+      <div className='CreateRoom'>
+        <form onSubmit={this.onSubmit}>
+          <button type='submit'>Submit</button>
+        </form>
       </div>
     )
   }
