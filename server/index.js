@@ -1,12 +1,14 @@
 const uuid = require('uuid/v4')
 const fs = require('fs')
+const http = require('http')
+const socketio = require('socket.io')
 
-const server = require('http').createServer()
-const io = require('socket.io')(server, {
-  serveClient: false
-})
 const port = process.env.PORT || 4000
-server.listen(port)
+const testing = process.env.MIO_TEST ? true : false
+
+function console_log (str) {
+  testing || console.log(str)
+}
 
 function fileExists (path) {
   try {
@@ -17,87 +19,132 @@ function fileExists (path) {
   }
 }
 
-console.log('start listening at port ' + port)
+class Database {
+  constructor (options) {
+    this.testing = options.testing
+    this.room_json = options.room_json
+    this.user_json = options.user_json
 
-const room = fileExists('room.json')
-  ? JSON.parse(fs.readFileSync('room.json'))
-  : {}
-const user = fileExists('user.json')
-  ? JSON.parse(fs.readFileSync('user.json'))
-  : {}
+    this.room =
+      fileExists(this.room_json) && !this.testing
+        ? JSON.parse(fs.readFileSync(this.room_json))
+        : {}
+    this.user =
+      fileExists(this.user_json) && !this.testing
+        ? JSON.parse(fs.readFileSync(this.user_json))
+        : {}
+    this.uid2sid = {}
 
-const shutdownGracefully = () => {
-  fs.writeFileSync('room.json', JSON.stringify(room))
-  fs.writeFileSync('user.json', JSON.stringify(user))
-  process.exit(0)
+    this.shutdownGracefully = this.shutdownGracefully.bind(this)
+    process.on('SIGTERM', this.shutdownGracefully)
+    process.on('SIGINT', this.shutdownGracefully)
+  }
+
+  shutdownGracefully () {
+    if (!this.testing) {
+      fs.writeFileSync(this.room_json, JSON.stringify(this.room))
+      fs.writeFileSync(this.user_json, JSON.stringify(this.user))
+    }
+    process.exit(0)
+  }
+
+  createUser (roomid) {
+    const uid = 'U' + uuid()
+    const password = 'P' + uuid()
+    this.user[uid] = { password, roomid }
+    return { uid, password }
+  }
+
+  createRoom () {
+    const roomid = 'R' + uuid()
+    const { uid, password } = this.createUser(roomid)
+    this.room[roomid] = { master: uid }
+    return { uid, password, roomid }
+  }
+
+  roomExists (roomid) {
+    return this.room.hasOwnProperty(roomid)
+  }
+
+  userExists (uid, password, roomid) {
+    return (
+      this.user.hasOwnProperty(uid) &&
+      this.user[uid].password === password &&
+      this.user[uid].roomid === roomid
+    )
+  }
+
+  // REMARK: Any user will be removed only by deleting the room
+  // that the user is in.
+  deleteRoom (roomid) {
+    delete this.room[roomid]
+    Object.keys(this.user).forEach(uid => {
+      if (this.user[uid].roomid === roomid) delete this.user[uid]
+    })
+  }
+
+  isAnyoneIn (roomid) {
+    return Object.keys(this.user).some(
+      uid =>
+        this.user[uid].roomid === roomid && this.uid2sid.hasOwnProperty(uid)
+    )
+  }
+
+  getRoomMasterUid (roomid) {
+    return this.room[roomid].master
+  }
+
+  setSid (uid, sid) {
+    this.uid2sid[uid] = sid
+  }
+
+  getSid (uid) {
+    return this.uid2sid[uid]
+  }
+
+  deleteSidOf (uid) {
+    delete this.uid2sid[uid]
+  }
 }
 
-process.on('SIGTERM', shutdownGracefully)
-process.on('SIGINT', shutdownGracefully)
-
-function createUser (roomid) {
-  const uid = 'U' + uuid()
-  const password = 'P' + uuid()
-  user[uid] = { password, roomid }
-  return { uid, password }
-}
-
-function createRoom () {
-  const roomid = 'R' + uuid()
-  const { uid, password } = createUser(roomid)
-  room[roomid] = { master: uid }
-  return { uid, password, roomid }
-}
-
-function roomExists (roomid) {
-  return room.hasOwnProperty(roomid)
-}
-
-function userExists (uid, password, roomid) {
-  return (
-    user.hasOwnProperty(uid) &&
-    user[uid].password === password &&
-    user[uid].roomid === roomid
-  )
-}
-
-// REMARK: Any user will be removed only by deleting the room
-// that the user is in.
-function deleteRoom (roomid) {
-  delete room[roomid]
-  Object.keys(user).forEach(uid => {
-    if (user[uid].roomid === roomid) delete user[uid]
-  })
-}
-
-const uid2sid = {}
+const db = new Database({
+  testing: testing,
+  room_json: 'room.json',
+  user_json: 'user.json'
+})
+const server = http.createServer()
+const io = socketio(server, {
+  serveClient: false
+})
+server.listen(port)
+console_log('start listening at port ' + port)
 
 io.on('connection', socket => {
   const log = msg => {
-    console.log('[' + socket.id + '] ' + msg)
+    console_log('[' + socket.id + '] ' + msg)
   }
 
   log('Connect')
 
   socket.on('create-room', (param, cb) => {
-    const { uid, password, roomid } = createRoom()
+    const { uid, password, roomid } = db.createRoom()
     cb(uid, password, roomid)
   })
 
   socket.on('issue-uid', (param, cb) => {
     const roomid = param.roomid
-    if (!roomExists(roomid)) {
+    if (!db.roomExists(roomid)) {
       log('roomid ' + roomid + ' not found')
       cb(null, null)
       return
     }
-    const { uid, password } = createUser(roomid)
+    const { uid, password } = db.createUser(roomid)
     cb(uid, password)
   })
 
   socket.emit('auth', {}, (uid, password, roomid) => {
     // check uid and password are correct
-    if (!userExists(uid, password, roomid)) {
+    if (!db.userExists(uid, password, roomid)) {
       log('auth failed ' + uid)
       socket.emit('auth-result', { status: 'ng' })
       return
@@ -107,7 +154,7 @@ io.on('connection', socket => {
     socket.join(roomid)
     log('auth: ' + uid + ' / ' + roomid)
 
-    uid2sid[uid] = socket.id
+    db.setSid(uid, socket.id)
 
     socket.on('chat-msg', (msg, cb) => {
       log('chat-msg: ' + msg)
@@ -117,7 +164,7 @@ io.on('connection', socket => {
 
     socket.on('quiz-music', (msg, cb) => {
       // check the user is master
-      if (room[roomid].master !== uid) {
+      if (db.getRoomMasterUid(roomid) !== uid) {
         log('quiz-music failed')
         return
       }
@@ -129,7 +176,7 @@ io.on('connection', socket => {
     })
 
     socket.on('quiz-answer', (msg, cb) => {
-      const master = uid2sid[room[roomid].master]
+      const master = db.getSid(db.getRoomMasterUid(roomid))
       if (master === undefined) return
 
       log('quiz-answer: ' + msg.answer)
@@ -154,15 +201,12 @@ io.on('connection', socket => {
     socket.on('disconnect', () => {
       log('Leave')
 
-      delete uid2sid[uid]
+      db.deleteSidOf(uid)
 
       // Delete the room if no one is connecting to it
-      const no_one_is_here = !Object.keys(user).some(
-        uid => user[uid].roomid === roomid && uid2sid.hasOwnProperty(uid)
-      )
-      if (no_one_is_here) {
+      if (!db.isAnyoneIn(roomid)) {
         log('Delete ' + roomid)
-        deleteRoom(roomid)
+        db.deleteRoom(roomid)
       }
     })
 
