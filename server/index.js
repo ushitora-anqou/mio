@@ -61,6 +61,15 @@ function userExists (uid, password, roomid) {
   )
 }
 
+// REMARK: Any user will be removed only by deleting the room
+// that the user is in.
+function deleteRoom (roomid) {
+  delete room[roomid]
+  Object.keys(user).forEach(uid => {
+    if (user[uid].roomid === roomid) delete user[uid]
+  })
+}
+
 const uid2sid = {}
 
 io.on('connection', socket => {
@@ -144,6 +153,17 @@ io.on('connection', socket => {
 
     socket.on('disconnect', () => {
       log('Leave')
+
+      delete uid2sid[uid]
+
+      // Delete the room if no one is connecting to it
+      const no_one_is_here = !Object.keys(user).some(
+        uid => user[uid].roomid === roomid && uid2sid.hasOwnProperty(uid)
+      )
+      if (no_one_is_here) {
+        log('Delete ' + roomid)
+        deleteRoom(roomid)
+      }
     })
 
     socket.emit('auth-result', { status: 'ok' })
