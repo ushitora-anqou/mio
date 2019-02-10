@@ -51,14 +51,16 @@ class Database {
   createUser (roomid) {
     const uid = 'U' + uuid()
     const password = 'P' + uuid()
-    this.user[uid] = { password, roomid }
+    const created_at = Date.now()
+    this.user[uid] = { password, roomid, created_at }
     return { uid, password }
   }
 
   createRoom () {
     const roomid = 'R' + uuid()
     const { uid, password } = this.createUser(roomid)
-    this.room[roomid] = { master: uid }
+    const created_at = Date.now()
+    this.room[roomid] = { master: uid, created_at }
     return { uid, password, roomid }
   }
 
@@ -108,7 +110,7 @@ class Database {
 }
 
 const db = new Database({
-  testing: testing,
+  testing,
   room_json: 'room.json',
   user_json: 'user.json'
 })
