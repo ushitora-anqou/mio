@@ -1,0 +1,3 @@
+- name
+- music
+- remove room/user

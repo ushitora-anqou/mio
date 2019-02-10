@@ -36,14 +36,14 @@ process.on('SIGTERM', shutdownGracefully)
 process.on('SIGINT', shutdownGracefully)
 
 function createUser (roomid) {
-  const uid = uuid()
-  const password = uuid()
+  const uid = 'U' + uuid()
+  const password = 'P' + uuid()
   user[uid] = { password, roomid }
   return { uid, password }
 }
 
 function createRoom () {
-  const roomid = uuid()
+  const roomid = 'R' + uuid()
   const { uid, password } = createUser(roomid)
   room[roomid] = { master: uid }
   return { uid, password, roomid }
@@ -60,6 +60,8 @@ function userExists (uid, password, roomid) {
     user[uid].roomid === roomid
   )
 }
+
+const uid2sid = {}
 
 io.on('connection', socket => {
   const log = msg => {
@@ -96,7 +98,7 @@ io.on('connection', socket => {
     socket.join(roomid)
     log('auth: ' + uid + ' / ' + roomid)
 
-    user[uid].sid = socket.id
+    uid2sid[uid] = socket.id
 
     socket.on('chat-msg', (msg, cb) => {
       log('chat-msg: ' + msg)
@@ -118,9 +120,12 @@ io.on('connection', socket => {
     })
 
     socket.on('quiz-answer', (msg, cb) => {
+      const master = uid2sid[room[roomid].master]
+      if (master === undefined) return
+
       log('quiz-answer: ' + msg.answer)
 
-      io.to(user[room[roomid].master].sid).emit('quiz-answer', {
+      io.to(master).emit('quiz-answer', {
         uid: uid,
         time: msg.time,
         answer: msg.answer

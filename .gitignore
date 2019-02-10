@@ -25,3 +25,4 @@ yarn-error.log*
 # written for mio
 user.json
 room.json
+node.md
