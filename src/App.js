@@ -435,18 +435,12 @@ class QuizRoom extends Component {
     this.socket.on('auth-result', ({ status }) => {
       this.setState({ established: status === 'ok' })
     })
+    this.socket.on('disconnect', () => {
+      this.setState({ established: null })
+    })
   }
 
   render () {
-    if (this.state.established === null) {
-      return (
-        <div className='QuizRoom'>
-          <h1>Hello holo</h1>
-          <p>Connecting...</p>
-        </div>
-      )
-    }
-
     if (this.state.established === false) {
       return <Route component={NoMatch} />
     }
@@ -454,6 +448,11 @@ class QuizRoom extends Component {
     return (
       <div className='QuizRoom'>
         <h1>Hello holo</h1>
+        {this.state.established === null && (
+          <div className='ConStatus'>
+            <p>Connecting. Hang tight...</p>
+          </div>
+        )}
         <SceneView master={this.master} socket={this.socket} />
         <ChatWindow socket={this.socket} />
       </div>
