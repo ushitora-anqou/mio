@@ -75,7 +75,7 @@ class ChatWindow extends Component {
     const body = this.inputMsg.current.value
     if (body !== '') {
       this.props.socket.emit('chat-msg', body, status => {
-        if (status === 'ok') this.inputMsg.current.value = ''
+        this.inputMsg.current.value = ''
       })
     }
   }
@@ -138,7 +138,7 @@ class WaitMusic extends Component {
     readFileAsync(file)
       .then(buf => {
         this.props.socket.emit('quiz-music', { buf: buf }, status => {
-          if (status === 'ok') changeScene(this, ShowResult, { judge: true })
+          changeScene(this, ShowResult, { judge: true })
         })
       })
       .catch(err => {
@@ -208,7 +208,7 @@ class InputAnswer extends Component {
       'quiz-answer',
       { time: this.props.time, answer: this.inputAnswer.current.value },
       status => {
-        if (status === 'ok') changeScene(this, ShowResult, { judge: false })
+        changeScene(this, ShowResult, { judge: false })
       }
     )
   }
@@ -420,8 +420,8 @@ class QuizRoom extends Component {
       this.socket.emit(
         'issue-uid',
         { roomid: this.roomid },
-        (status, uid, password) => {
-          if (status !== 'ok') {
+        (uid, password) => {
+          if (uid === null || password === null) {
             this.setState({ established: false }) // not found
             return
           }

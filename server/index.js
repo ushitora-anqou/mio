@@ -77,11 +77,11 @@ io.on('connection', socket => {
     const roomid = param.roomid
     if (!roomExists(roomid)) {
       log('roomid ' + roomid + ' not found')
-      cb('ng')
+      cb(null, null)
       return
     }
     const { uid, password } = createUser(roomid)
-    cb('ok', uid, password)
+    cb(uid, password)
   })
 
   socket.emit('auth', {}, (uid, password, roomid) => {
@@ -101,21 +101,20 @@ io.on('connection', socket => {
     socket.on('chat-msg', (msg, cb) => {
       log('chat-msg: ' + msg)
       io.to(roomid).emit('chat-msg', { id: uuid(), body: msg })
-      cb('ok')
+      cb()
     })
 
     socket.on('quiz-music', (msg, cb) => {
       // check the user is master
       if (room[roomid].master !== uid) {
         log('quiz-music failed')
-        cb('ng')
         return
       }
 
       log('quiz-music: ' + msg.buf.length)
 
       socket.to(roomid).emit('quiz-music', msg)
-      cb('ok')
+      cb()
     })
 
     socket.on('quiz-answer', (msg, cb) => {
@@ -127,7 +126,7 @@ io.on('connection', socket => {
         answer: msg.answer
       })
 
-      cb('ok')
+      cb()
     })
 
     socket.on('quiz-result', (msg, cb) => {
