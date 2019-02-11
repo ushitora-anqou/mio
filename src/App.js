@@ -84,7 +84,10 @@ class ChatWindow extends Component {
     return (
       <div className='ChatWindow'>
         <ChatHistory history={this.state.history} />
-        <ChatPostForm onSubmit={this.handleSubmit} inputMsg={this.inputMsg} />
+        <ChatPostForm
+          handleSubmit={this.handleSubmit}
+          inputMsg={this.inputMsg}
+        />
       </div>
     )
   }
