@@ -492,11 +492,7 @@ class QuizRoom extends Component {
     return (
       <div className='QuizRoom'>
         <h1>Hello holo</h1>
-        {this.state.established === null && (
-          <div className='ConStatus'>
-            <p>Connecting. Hang tight...</p>
-          </div>
-        )}
+        <ConnectionStatus established={this.state.established} />
         <SceneView
           master={this.master}
           socket={this.socket}
@@ -506,6 +502,16 @@ class QuizRoom extends Component {
       </div>
     )
   }
+}
+
+function ConnectionStatus (props) {
+  return (
+    <div className='ConnectionStatus'>
+      {props.established === null && (
+        <p>Connecting to the server. Please hang tight...</p>
+      )}
+    </div>
+  )
 }
 
 const App = () => (

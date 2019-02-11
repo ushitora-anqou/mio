@@ -275,7 +275,10 @@ io.on('connection', socket => {
       }
     })
 
-    socket.emit('auth-result', { status: 'ok' })
+    socket.emit('auth-result', {
+      status: 'ok'
+    })
+
     return
   })
 })
