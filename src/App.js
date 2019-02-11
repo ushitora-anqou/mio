@@ -437,33 +437,12 @@ class QuizRoom extends Component {
     this.roomid = props.roomid
 
     this.master = props.master
-    if (this.master) {
-      this.uid = props.uid
-      this.password = props.password
-    }
+    this.uid = props.uid
+    this.password = props.password
 
     this.socket = newSocket()
     this.socket.on('auth', (x, cb) => {
-      if (this.hasOwnProperty('uid')) {
-        cb(this.uid, this.password, this.roomid)
-        return
-      }
-
-      // get uid and password
-      this.socket.emit(
-        'issue-uid',
-        { roomid: this.roomid },
-        (uid, password) => {
-          if (uid === null || password === null) {
-            this.setState({ established: false }) // not found
-            return
-          }
-
-          this.uid = uid
-          this.password = password
-          cb(uid, password, this.roomid)
-        }
-      )
+      cb(this.uid, this.password, this.roomid)
     })
     this.socket.on('auth-result', ({ status }) => {
       this.setState({ established: status === 'ok' })
@@ -536,8 +515,40 @@ const Room = ({ match, location }) =>
   location.state ? (
     <QuizRoom roomid={match.params.roomid} {...location.state} />
   ) : (
-    <QuizRoom roomid={match.params.roomid} master={false} />
+    <IssueAccount roomid={match.params.roomid} />
   )
+
+class IssueAccount extends Component {
+  constructor (props) {
+    super(props)
+
+    this.state = { state: null, ready: null }
+    this.socket = newSocket()
+    this.socket.emit(
+      'issue-uid',
+      { roomid: this.props.roomid },
+      (uid, password) => {
+        if (uid === null || password === null) this.setState({ ready: false })
+        else
+          this.setState({
+            ready: true,
+            state: { uid, password, master: false }
+          })
+      }
+    )
+  }
+
+  render () {
+    if (this.state.ready === null) return <div />
+    if (this.state.ready === false) return <Route component={NoMatch} />
+
+    return (
+      <Redirect
+        to={{ pathname: `/room/${this.props.roomid}`, state: this.state.state }}
+      />
+    )
+  }
+}
 
 class CreateRoom extends Component {
   constructor (props) {
