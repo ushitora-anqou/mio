@@ -19,6 +19,12 @@ function fileExists (path) {
   }
 }
 
+const STAGE = {
+  WAITING_QUIZ_MUSIC: 0,
+  WAITING_QUIZ_ANSWER: 1,
+  WAITING_QUIZ_RESULT: 2
+}
+
 class Database {
   constructor (options) {
     this.testing = options.testing
@@ -60,8 +66,19 @@ class Database {
     const roomid = 'R' + uuid()
     const { uid, password } = this.createUser(roomid)
     const created_at = Date.now()
-    this.room[roomid] = { master: uid, created_at }
+    const stage = STAGE.WAITING_QUIZ_MUSIC
+    this.room[roomid] = { master: uid, created_at, stage }
     return { uid, password, roomid }
+  }
+
+  checkRoomStage (roomid, stage) {
+    const room = this.room[roomid]
+    if (!room) return false
+    return room.stage === stage
+  }
+
+  updateRoomStage (roomid, stage) {
+    this.room[roomid].stage = stage
   }
 
   roomExists (roomid) {
@@ -165,11 +182,17 @@ io.on('connection', socket => {
     })
 
     socket.on('quiz-music', (msg, cb) => {
-      // check the user is master
-      if (db.getRoomMasterUid(roomid) !== uid) {
+      if (
+        !(
+          db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC) &&
+          db.getRoomMasterUid(roomid) === uid
+        )
+      ) {
         log('quiz-music failed')
         return
       }
+
+      db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)
 
       log('quiz-music: ' + msg.buf.length)
 
@@ -179,7 +202,18 @@ io.on('connection', socket => {
 
     socket.on('quiz-answer', (msg, cb) => {
       const master = db.getSid(db.getRoomMasterUid(roomid))
-      if (master === undefined) return
+
+      if (
+        !(
+          db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER) &&
+          master !== undefined
+        )
+      ) {
+        log('quiz-answer failed')
+        return
+      }
+
+      db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_RESULT)
 
       log('quiz-answer: ' + msg.answer)
 
@@ -193,6 +227,11 @@ io.on('connection', socket => {
     })
 
     socket.on('quiz-result', (msg, cb) => {
+      if (!db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_RESULT)) {
+        log('quiz-result failed')
+        return
+      }
+
       log('quiz-result: ' + JSON.stringify(msg))
 
       socket.to(roomid).emit('quiz-result', msg)
