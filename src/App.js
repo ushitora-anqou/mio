@@ -83,22 +83,34 @@ class ChatWindow extends Component {
   render () {
     return (
       <div className='ChatWindow'>
-        <table>
-          <tbody>
-            {this.state.history.map(msg => (
-              <tr key={msg.id}>
-                <td>{msg.body}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <form onSubmit={this.handleSubmit}>
-          <input type='text' ref={this.inputMsg} />
-          <button type='submit'>Send</button>
-        </form>
+        <ChatHistory history={this.state.history} />
+        <ChatPostForm onSubmit={this.handleSubmit} inputMsg={this.inputMsg} />
       </div>
     )
   }
+}
+
+function ChatHistory (props) {
+  return (
+    <table>
+      <tbody>
+        {props.history.map(msg => (
+          <tr key={msg.id}>
+            <td>{msg.body}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function ChatPostForm (props) {
+  return (
+    <form onSubmit={props.handleSubmit}>
+      <input type='text' ref={props.inputMsg} />
+      <button type='submit'>Send</button>
+    </form>
+  )
 }
 
 function setRedirect (self, pagename, state) {
@@ -312,65 +324,17 @@ class ShowResult extends Component {
   render () {
     if (this.state.redirect) return <Redirect to={{ ...this.state.redirect }} />
 
-    const entries = this.state.entries
     return (
       <div className='ShowResult'>
-        {isEmpty(entries) ? (
+        {isEmpty(this.state.entries) ? (
           <p>Waiting for the result</p>
         ) : (
           <div>
-            <table>
-              <tbody>
-                {Object.keys(entries)
-                  .sort(
-                    (lhs_uid, rhs_uid) =>
-                      entries[lhs_uid].time - entries[rhs_uid].time
-                  )
-                  .map(uid => {
-                    const entry = entries[uid]
-                    return (
-                      <tr key={entry.uid}>
-                        <td>{entry.uid}</td>
-                        <td>{entry.time}</td>
-                        <td>{entry.answer}</td>
-                        {entry.hasOwnProperty('time') &&
-                        entry.hasOwnProperty('answer') ? (
-                          <td>
-                            <label>
-                              <input
-                                type='radio'
-                                name={entry.uid}
-                                checked={entry.judge === true}
-                                onChange={e => {
-                                  return this.onClickOk(entry.uid)
-                                }}
-                              />
-                              <span role='img' aria-label='check'>
-                                ✔️
-                              </span>
-                            </label>
-                            <label>
-                              <input
-                                type='radio'
-                                name={entry.uid}
-                                checked={entry.judge === false}
-                                onChange={e => {
-                                  return this.onClickNg(entry.uid)
-                                }}
-                              />
-                              <span role='img' aria-label='x'>
-                                ❌
-                              </span>
-                            </label>
-                          </td>
-                        ) : (
-                          <td />
-                        )}
-                      </tr>
-                    )
-                  })}
-              </tbody>
-            </table>
+            <ShowResultEntries
+              entries={this.state.entries}
+              onClickOk={this.onClickOk}
+              onClickNg={this.onClickNg}
+            />
             {this.canSendJudge() && (
               <button onClick={this.onSendJudge}>Send</button>
             )}
@@ -382,6 +346,63 @@ class ShowResult extends Component {
       </div>
     )
   }
+}
+
+function ShowResultEntries (props) {
+  const entries = props.entries
+  const uids = Object.keys(entries).sort(
+    (lhs_uid, rhs_uid) => entries[lhs_uid].time - entries[rhs_uid].time
+  )
+
+  return (
+    <table>
+      <tbody>
+        {uids.map(uid => {
+          const entry = entries[uid]
+          return (
+            <tr key={entry.uid}>
+              <td>{entry.uid}</td>
+              <td>{entry.time}</td>
+              <td>{entry.answer}</td>
+              {entry.hasOwnProperty('time') &&
+              entry.hasOwnProperty('answer') ? (
+                <td>
+                  <label>
+                    <input
+                      type='radio'
+                      name={entry.uid}
+                      checked={entry.judge === true}
+                      onChange={e => {
+                        return props.onClickOk(entry.uid)
+                      }}
+                    />
+                    <span role='img' aria-label='check'>
+                      ✔️
+                    </span>
+                  </label>
+                  <label>
+                    <input
+                      type='radio'
+                      name={entry.uid}
+                      checked={entry.judge === false}
+                      onChange={e => {
+                        return props.onClickNg(entry.uid)
+                      }}
+                    />
+                    <span role='img' aria-label='x'>
+                      ❌
+                    </span>
+                  </label>
+                </td>
+              ) : (
+                <td />
+              )}
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
 }
 
 function SceneRoute (Scene, pageName, props) {
