@@ -54,17 +54,17 @@ class Database {
     process.exit(0)
   }
 
-  createUser (roomid) {
+  createUser (roomid, name) {
     const uid = 'U' + uuid()
     const password = 'P' + uuid()
     const created_at = Date.now()
-    this.user[uid] = { password, roomid, created_at }
+    this.user[uid] = { name, password, roomid, created_at }
     return { uid, password }
   }
 
-  createRoom () {
+  createRoom (masterName) {
     const roomid = 'R' + uuid()
-    const { uid, password } = this.createUser(roomid)
+    const { uid, password } = this.createUser(roomid, masterName)
     const created_at = Date.now()
     const stage = STAGE.WAITING_QUIZ_MUSIC
     this.room[roomid] = { master: uid, created_at, stage }
@@ -146,7 +146,7 @@ io.on('connection', socket => {
   log('Connect')
 
   socket.on('create-room', (param, cb) => {
-    const { uid, password, roomid } = db.createRoom()
+    const { uid, password, roomid } = db.createRoom(param.masterName)
     cb(uid, password, roomid)
   })
 
@@ -157,7 +157,7 @@ io.on('connection', socket => {
       cb(null, null)
       return
     }
-    const { uid, password } = db.createUser(roomid)
+    const { uid, password } = db.createUser(roomid, param.name)
     cb(uid, password)
   })
 

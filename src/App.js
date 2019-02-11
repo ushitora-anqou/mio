@@ -32,14 +32,6 @@ function isEmpty (obj) {
   return Object.keys(obj).length === 0
 }
 
-function fallback (fn, fallback) {
-  try {
-    return fn()
-  } catch (e) {
-    return fallback
-  }
-}
-
 function newSocket () {
   return io(config.server_uri)
 }
@@ -529,36 +521,66 @@ class IssueAccount extends Component {
   constructor (props) {
     super(props)
 
-    this.state = { state: null, ready: null }
+    this.STAGE = { WAITING_INPUT: 0, CONNECTING: 1, REDIRECT: 2, ERROR: 3 }
+    this.state = { state: null, stage: this.STAGE.WAITING_INPUT }
+    this.inputName = React.createRef()
+  }
+
+  handleSubmit = e => {
+    e.preventDefault()
+
     this.socket = newSocket()
     this.socket.emit(
       'issue-uid',
-      { roomid: this.props.roomid },
+      { name: this.inputName.current.value, roomid: this.props.roomid },
       (uid, password) => {
-        if (uid === null || password === null) this.setState({ ready: false })
+        if (uid === null || password === null)
+          this.setState({ stage: this.STAGE.ERROR })
         else
           this.setState({
-            ready: true,
+            stage: this.STAGE.REDIRECT,
             state: { uid, password, master: false }
           })
       }
     )
+    this.setState({ stage: this.STAGE.CONNECTING })
   }
 
   render () {
-    if (this.state.ready === null)
-      return (
-        <div>
-          <p>Connecting to the server...</p>
-        </div>
-      )
-    if (this.state.ready === false) return <Route component={NoMatch} />
+    switch (this.state.stage) {
+      case this.STAGE.WAITING_INPUT:
+        return (
+          <div className='IssueAccount'>
+            <form onSubmit={this.handleSubmit}>
+              <label>
+                Name
+                <input type='text' ref={this.inputName} />
+              </label>
+              <button type='submit'>Submit</button>
+            </form>
+          </div>
+        )
 
-    return (
-      <Redirect
-        to={{ pathname: `/room/${this.props.roomid}`, state: this.state.state }}
-      />
-    )
+      case this.STAGE.CONNECTING:
+        return (
+          <div className='IssueAccount'>
+            <p>Connecting to the server...</p>
+          </div>
+        )
+
+      case this.STAGE.REDIRECT:
+        return (
+          <Redirect
+            to={{
+              pathname: `/room/${this.props.roomid}`,
+              state: this.state.state
+            }}
+          />
+        )
+
+      default:
+        return <Route component={NoMatch} />
+    }
   }
 }
 
@@ -570,17 +592,22 @@ class CreateRoom extends Component {
       redirect: false
     }
 
+    this.inputName = React.createRef()
     this.socket = newSocket()
   }
 
   onSubmit = e => {
     e.preventDefault()
-    this.socket.emit('create-room', {}, (uid, password, roomid) => {
-      this.uid = uid
-      this.password = password
-      this.roomid = roomid
-      this.setState({ redirect: true })
-    })
+    this.socket.emit(
+      'create-room',
+      { masterName: this.inputName.current.value },
+      (uid, password, roomid) => {
+        this.uid = uid
+        this.password = password
+        this.roomid = roomid
+        this.setState({ redirect: true })
+      }
+    )
   }
 
   render () {
@@ -597,6 +624,10 @@ class CreateRoom extends Component {
     return (
       <div className='CreateRoom'>
         <form onSubmit={this.onSubmit}>
+          <label>
+            Name
+            <input type='text' ref={this.inputName} />
+          </label>
           <button type='submit'>Submit</button>
         </form>
       </div>
