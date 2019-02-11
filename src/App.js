@@ -90,7 +90,8 @@ function ChatHistory (props) {
     <table>
       <tbody>
         {props.history.map(msg => (
-          <tr key={msg.id}>
+          <tr key={msg.mid}>
+            <td>{msg.name}</td>
             <td>{msg.body}</td>
           </tr>
         ))}
@@ -257,7 +258,7 @@ class ShowResult extends Component {
       return update(state, {
         entries: {
           $merge: {
-            [msg.uid]: { uid: msg.uid, time: msg.time, answer: msg.answer }
+            [msg.uid]: msg
           }
         }
       })
@@ -362,8 +363,8 @@ function ShowResultEntries (props) {
                   : 'WrongRow'
               }
             >
-              <td>{entry.uid}</td>
-              <td>{entry.time}</td>
+              <td>{entry.name}</td>
+              <td>{entry.time.toFixed(4)}</td>
               <td>{entry.answer}</td>
               {props.judging && (
                 <td>

@@ -124,6 +124,10 @@ class Database {
   deleteSidOf (uid) {
     delete this.uid2sid[uid]
   }
+
+  getNameOf (uid) {
+    return this.user[uid].name
+  }
 }
 
 const db = new Database({
@@ -181,7 +185,12 @@ io.on('connection', socket => {
 
     socket.on('chat-msg', (msg, cb) => {
       log('chat-msg: ' + msg)
-      io.to(roomid).emit('chat-msg', { id: uuid(), body: msg })
+      io.to(roomid).emit('chat-msg', {
+        mid: uuid(),
+        uid: uid,
+        name: db.getNameOf(uid),
+        body: msg
+      })
       cb()
     })
 
@@ -224,7 +233,8 @@ io.on('connection', socket => {
       io.to(master).emit('quiz-answer', {
         uid: uid,
         time: msg.time,
-        answer: msg.answer
+        answer: msg.answer,
+        name: db.getNameOf(uid)
       })
 
       cb()
