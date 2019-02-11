@@ -333,11 +333,12 @@ class ShowResult extends Component {
               entries={this.state.entries}
               onClickOk={this.onClickOk}
               onClickNg={this.onClickNg}
+              judging={this.state.judging}
             />
             {this.canSendJudge() && (
               <button onClick={this.onClickJudge}>Send</button>
             )}
-            {!this.state.judging && (
+            {!this.state.judging && this.props.judge && (
               <button onClick={this.onClickDone}>Done</button>
             )}
           </div>
@@ -354,17 +355,25 @@ function ShowResultEntries (props) {
   )
 
   return (
-    <table>
+    <table className='ShowResultEntries'>
       <tbody>
         {uids.map(uid => {
           const entry = entries[uid]
           return (
-            <tr key={entry.uid}>
+            <tr
+              key={entry.uid}
+              className={
+                entry.judge === undefined
+                  ? ''
+                  : entry.judge
+                  ? 'CorrectRow'
+                  : 'WrongRow'
+              }
+            >
               <td>{entry.uid}</td>
               <td>{entry.time}</td>
               <td>{entry.answer}</td>
-              {entry.hasOwnProperty('time') &&
-              entry.hasOwnProperty('answer') ? (
+              {props.judging && (
                 <td>
                   <label>
                     <input
@@ -393,8 +402,6 @@ function ShowResultEntries (props) {
                     </span>
                   </label>
                 </td>
-              ) : (
-                <td />
               )}
             </tr>
           )
@@ -539,7 +546,12 @@ class IssueAccount extends Component {
   }
 
   render () {
-    if (this.state.ready === null) return <div />
+    if (this.state.ready === null)
+      return (
+        <div>
+          <p>Connecting to the server...</p>
+        </div>
+      )
     if (this.state.ready === false) return <Route component={NoMatch} />
 
     return (

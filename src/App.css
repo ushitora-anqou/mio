@@ -1,0 +1,7 @@
+.ShowResultEntries .CorrectRow {
+  background-color: palegreen;
+}
+
+.ShowResultEntries .WrongRow {
+  background-color: pink;
+}
