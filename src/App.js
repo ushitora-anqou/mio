@@ -259,11 +259,13 @@ class ShowResult extends Component {
   componentDidMount () {
     this.props.socket.on('quiz-answer', this.onQuizAnswer)
     this.props.socket.on('quiz-result', this.onQuizResult)
+    this.props.socket.on('quiz-reset', this.onQuizReset)
   }
 
   componentWillUnmount () {
     this.props.socket.off('quiz-answer', this.onQuizAnswer)
     this.props.socket.off('quiz-result', this.onQuizResult)
+    this.props.socket.off('quiz-reset', this.onQuizReset)
   }
 
   onQuizAnswer = msg => {
@@ -282,7 +284,11 @@ class ShowResult extends Component {
     this.setState({ entries: msg })
   }
 
-  onSendJudge = () => {
+  onQuizReset = () => {
+    setRedirect(this, 'wait-music', {})
+  }
+
+  onClickJudge = () => {
     this.props.socket.emit('quiz-result', this.state.entries, () => {
       this.setState({ judging: false })
     })
@@ -303,10 +309,6 @@ class ShowResult extends Component {
     return true
   }
 
-  onSendDone = () => {
-    setRedirect(this, 'wait-music', {})
-  }
-
   onClickOk = uid => {
     if (this.state.judging)
       this.setState((state, props) =>
@@ -319,6 +321,13 @@ class ShowResult extends Component {
       this.setState((state, props) =>
         update(state, { entries: { [uid]: { judge: { $set: false } } } })
       )
+  }
+
+  onClickDone = () => {
+    if (this.props.judge)
+      this.props.socket.emit('quiz-reset', {}, () => {
+        setRedirect(this, 'wait-music', {})
+      })
   }
 
   render () {
@@ -336,10 +345,10 @@ class ShowResult extends Component {
               onClickNg={this.onClickNg}
             />
             {this.canSendJudge() && (
-              <button onClick={this.onSendJudge}>Send</button>
+              <button onClick={this.onClickJudge}>Send</button>
             )}
             {!this.state.judging && (
-              <button onClick={this.onSendDone}>Done</button>
+              <button onClick={this.onClickDone}>Done</button>
             )}
           </div>
         )}

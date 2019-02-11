@@ -162,6 +162,10 @@ io.on('connection', socket => {
   })
 
   socket.emit('auth', {}, (uid, password, roomid) => {
+    const log = msg => {
+      console_log(`[${socket.id}][${uid} / ${roomid}] ${msg}`)
+    }
+
     // check uid and password are correct
     if (!db.userExists(uid, password, roomid)) {
       log('auth failed ' + uid)
@@ -171,7 +175,7 @@ io.on('connection', socket => {
     // if (!room.hasOwnProperty(roomid))  return false
 
     socket.join(roomid)
-    log('auth: ' + uid + ' / ' + roomid)
+    log('auth')
 
     db.setSid(uid, socket.id)
 
@@ -239,6 +243,26 @@ io.on('connection', socket => {
       cb()
     })
 
+    socket.on('quiz-reset', (msg, cb) => {
+      if (
+        !(
+          db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_RESULT) &&
+          db.getSid(db.getRoomMasterUid(roomid)) !== undefined
+        )
+      ) {
+        log('quiz-reset failed')
+        return
+      }
+
+      db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
+
+      log('quiz-reset')
+
+      socket.to(roomid).emit('quiz-reset', msg)
+
+      cb()
+    })
+
     socket.on('disconnect', () => {
       log('Leave')
 
@@ -246,7 +270,7 @@ io.on('connection', socket => {
 
       // Delete the room if no one is connecting to it
       if (!db.isAnyoneIn(roomid)) {
-        log('Delete ' + roomid)
+        log('Delete room')
         db.deleteRoom(roomid)
       }
     })
