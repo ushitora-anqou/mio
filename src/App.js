@@ -101,26 +101,25 @@ class ChatWindow extends Component {
   }
 }
 
-function changeScene (self, SceneComponent, props) {
-  self.props.changeScene(
-    <SceneComponent
-      changeScene={self.props.changeScene}
-      master={self.props.master}
-      socket={self.props.socket}
-      {...props}
-    />
-  )
+function setRedirect (self, pagename, state) {
+  self.setState({
+    redirect: { pathname: `/room/${self.props.roomid}/${pagename}`, state }
+  })
 }
 
 class WaitMusic extends Component {
   constructor (props) {
     super(props)
 
+    this.state = {
+      redirect: null
+    }
+
     this.inputMusicFile = React.createRef()
   }
 
   onQuizMusic = msg => {
-    changeScene(this, PlayMusic, { music: msg.buf })
+    setRedirect(this, 'play-music', { music: msg.buf })
   }
 
   componentDidMount () {
@@ -137,8 +136,8 @@ class WaitMusic extends Component {
 
     readFileAsync(file)
       .then(buf => {
-        this.props.socket.emit('quiz-music', { buf: buf }, status => {
-          changeScene(this, ShowResult, { judge: true })
+        this.props.socket.emit('quiz-music', { buf: buf }, () => {
+          setRedirect(this, 'show-result', { judge: true })
         })
       })
       .catch(err => {
@@ -147,6 +146,8 @@ class WaitMusic extends Component {
   }
 
   render () {
+    if (this.state.redirect) return <Redirect to={{ ...this.state.redirect }} />
+
     return (
       <div className='WaitMusic'>
         {this.props.master && (
@@ -166,7 +167,8 @@ class PlayMusic extends Component {
     super(props)
 
     this.state = {
-      playing: false
+      playing: false,
+      redirect: null
     }
     this.music = { buf: props.music }
   }
@@ -178,12 +180,14 @@ class PlayMusic extends Component {
   }
 
   onClickStop = () => {
-    changeScene(this, InputAnswer, {
+    setRedirect(this, 'input-answer', {
       time: this.audioCtx.currentTime - this.startTime
     })
   }
 
   render () {
+    if (this.state.redirect) return <Redirect to={{ ...this.state.redirect }} />
+
     return (
       <div className='PlayMusic'>
         {this.state.playing ? (
@@ -200,6 +204,10 @@ class InputAnswer extends Component {
   constructor (props) {
     super(props)
 
+    this.state = {
+      redirect: null
+    }
+
     this.inputAnswer = React.createRef()
   }
 
@@ -208,12 +216,14 @@ class InputAnswer extends Component {
       'quiz-answer',
       { time: this.props.time, answer: this.inputAnswer.current.value },
       status => {
-        changeScene(this, ShowResult, { judge: false })
+        setRedirect(this, 'show-result', { judge: false })
       }
     )
   }
 
   render () {
+    if (this.state.redirect) return <Redirect to={{ ...this.state.redirect }} />
+
     return (
       <div className='InputAnswer'>
         <input type='text' ref={this.inputAnswer} />
@@ -229,7 +239,8 @@ class ShowResult extends Component {
 
     this.state = {
       judging: props.judge,
-      entries: {}
+      entries: {},
+      redirect: null
     }
   }
 
@@ -281,7 +292,7 @@ class ShowResult extends Component {
   }
 
   onSendDone = () => {
-    changeScene(this, WaitMusic, {})
+    setRedirect(this, 'wait-music', {})
   }
 
   onClickOk = uid => {
@@ -299,6 +310,8 @@ class ShowResult extends Component {
   }
 
   render () {
+    if (this.state.redirect) return <Redirect to={{ ...this.state.redirect }} />
+
     const entries = this.state.entries
     return (
       <div className='ShowResult'>
@@ -371,28 +384,29 @@ class ShowResult extends Component {
   }
 }
 
-class SceneView extends Component {
-  constructor (props) {
-    super(props)
+function SceneRoute (Scene, pageName, props) {
+  return (
+    <Route
+      exact
+      path={`/room/${props.roomid}/${pageName}`}
+      render={({ location }) => <Scene {...props} {...location.state || {}} />}
+    />
+  )
+}
 
-    this.state = {
-      scene: (
-        <WaitMusic
-          changeScene={this.changeScene}
-          socket={this.props.socket}
-          master={this.props.master}
-        />
-      )
-    }
-  }
-
-  changeScene = scene => {
-    this.setState({ scene: scene })
-  }
-
-  render () {
-    return <div className='SceneView'>{this.state.scene}</div>
-  }
+function SceneView (props) {
+  return (
+    <div className='SceneView'>
+      <Switch>
+        {SceneRoute(PlayMusic, 'play-music', props)}
+        {SceneRoute(InputAnswer, 'input-answer', props)}
+        {SceneRoute(ShowResult, 'show-result', props)}
+        {SceneRoute(WaitMusic, 'wait-music', props)}
+        {SceneRoute(WaitMusic, '', props)}
+        <Route component={NoMatch} />
+      </Switch>
+    </div>
+  )
 }
 
 class QuizRoom extends Component {
@@ -453,7 +467,11 @@ class QuizRoom extends Component {
             <p>Connecting. Hang tight...</p>
           </div>
         )}
-        <SceneView master={this.master} socket={this.socket} />
+        <SceneView
+          master={this.master}
+          socket={this.socket}
+          roomid={this.roomid}
+        />
         <ChatWindow socket={this.socket} />
       </div>
     )
