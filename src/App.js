@@ -343,6 +343,14 @@ function ShowResultEntries (props) {
   )
 }
 
+function WaitReset (props) {
+  return (
+    <div className='WaitReset'>
+      <p>Waiting for the current ongoing game to finish... </p>
+    </div>
+  )
+}
+
 class SceneView extends Component {
   constructor (props) {
     super(props)
@@ -351,13 +359,24 @@ class SceneView extends Component {
       WAIT_MUSIC: 0,
       PLAY_AND_ANSWER: 1,
       SELECT_CORRECT_ANSWER: 2,
-      SHOW_RESULT: 3
+      SHOW_RESULT: 3,
+      WAIT_RESET: 4
     }
 
     this.socket = props.socket
     this.state = {
-      scene: { kind: this.SCENE.WAIT_MUSIC }
+      scene: {
+        kind: this.SCENE.WAIT_MUSIC
+      }
     }
+  }
+
+  componentDidUpdate () {
+    if (
+      this.props.waitForReset &&
+      this.state.scene.kind !== this.SCENE.WAIT_RESET
+    )
+      this._changeScene(this.SCENE.WAIT_RESET)
   }
 
   render () {
@@ -403,6 +422,10 @@ class SceneView extends Component {
         ) : (
           <ShowResult answers={this.state.scene.answers} master={false} />
         )
+        break
+
+      case S.WAIT_RESET:
+        content = <WaitReset />
         break
     }
 
@@ -493,6 +516,7 @@ class SceneView extends Component {
   }
 
   onQuizReset = () => {
+    this.props.onQuizReset()
     this._changeScene(this.SCENE.WAIT_MUSIC)
   }
 }
@@ -501,6 +525,8 @@ class QuizRoom extends Component {
   constructor (props) {
     super(props)
     this.state = {
+      socket: newSocket(),
+      shouldWaitForReset: false,
       established: null // connecting
     }
     this.roomid = props.roomid
@@ -509,12 +535,12 @@ class QuizRoom extends Component {
     this.uid = props.uid
     this.password = props.password
 
-    this.socket = newSocket()
+    this.socket = this.state.socket
     this.socket.on('auth', (x, cb) => {
       cb(this.uid, this.password, this.roomid)
     })
-    this.socket.on('auth-result', ({ status }) => {
-      this.setState({ established: status === 'ok' })
+    this.socket.on('auth-result', ({ status, shouldWaitForReset }) => {
+      this.setState({ established: status === 'ok', shouldWaitForReset })
     })
     this.socket.on('disconnect', () => {
       this.setState({ established: null })
@@ -530,14 +556,22 @@ class QuizRoom extends Component {
       <div className='QuizRoom'>
         <h1>Hello holo</h1>
         <ConnectionStatus established={this.state.established} />
-        <SceneView
-          master={this.master}
-          socket={this.socket}
-          roomid={this.roomid}
-        />
+        {this.state.established && (
+          <SceneView
+            master={this.master}
+            socket={this.socket}
+            roomid={this.roomid}
+            waitForReset={this.state.shouldWaitForReset}
+            onQuizReset={this.handleQuizReset}
+          />
+        )}
         <ChatWindow socket={this.socket} />
       </div>
     )
+  }
+
+  handleQuizReset = () => {
+    this.setState({ shouldWaitForReset: false })
   }
 }
 
@@ -659,11 +693,12 @@ class CreateRoom extends Component {
     super(props)
 
     this.state = {
+      socket: newSocket(),
       redirect: false
     }
 
     this.inputName = React.createRef()
-    this.socket = newSocket()
+    this.socket = this.state.socket
   }
 
   onSubmit = e => {

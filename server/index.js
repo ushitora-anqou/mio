@@ -285,7 +285,8 @@ io.on('connection', socket => {
     })
 
     socket.emit('auth-result', {
-      status: 'ok'
+      status: 'ok',
+      shouldWaitForReset: !db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
     })
 
     return
