@@ -194,7 +194,7 @@ io.on('connection', socket => {
     }
 
     socket.on('chat-msg', (msg, cb) => {
-      log('chat-msg: ' + msg)
+      //log('chat-msg: ' + msg)
       sendChatMsg(msg.tag, msg.body)
       cb()
     })

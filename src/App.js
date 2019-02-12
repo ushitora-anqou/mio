@@ -85,21 +85,53 @@ class ChatWindow extends Component {
   }
 }
 
-function ChatHistory (props) {
-  return (
-    <table>
-      <tbody>
-        {props.history.map(msg => (
-          <tr key={msg.mid}>
-            <td>{msg.name}</td>
-            {msg.tag === 'message' && <td>{msg.body}</td>}
-            {msg.tag === 'join' && <td>joined</td>}
-            {msg.tag === 'leave' && <td>left</td>}
-          </tr>
+class ChatHistory extends Component {
+  constructor (props) {
+    super(props)
+    this.lastDummyRow = React.createRef()
+  }
+
+  scrollToBottom () {
+    this.lastDummyRow.current.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  componentDidMount () {
+    this.scrollToBottom()
+  }
+
+  componentDidUpdate () {
+    this.scrollToBottom()
+  }
+
+  render () {
+    return (
+      <div className='ChatHistory'>
+        {this.props.history.map(msg => (
+          <div className='ChatHistoryRow' key={msg.mid}>
+            {msg.tag === 'message' && (
+              <div>
+                <span className='ChatHistoryRowName'>{msg.name}</span>
+                <span className='ChatHistoryRowBody'>{msg.body}</span>
+              </div>
+            )}
+            {msg.tag === 'join' && (
+              <div className='ChatHistoryRowNotification'>
+                <span className='ChatHistoryRowName'>{msg.name}</span>
+                <span className='ChatHistoryRowBody'>join</span>
+              </div>
+            )}
+            {msg.tag === 'leave' && (
+              <div className='ChatHistoryRowNotification'>
+                <span className='ChatHistoryRowName'>{msg.name}</span>
+                <span className='ChatHistoryRowBody'>left</span>
+              </div>
+            )}
+          </div>
         ))}
-      </tbody>
-    </table>
-  )
+        <div className='ChatHistoryLastDummyRow' ref={this.lastDummyRow} />
+      </div>
+    )
+  }
 }
 
 function ChatPostForm (props) {

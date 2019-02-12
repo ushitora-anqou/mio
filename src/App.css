@@ -1,7 +1,42 @@
+.App {
+  width: 50%;
+  margin: 1% auto;
+}
+
 .ShowResultEntries .CorrectRow {
   background-color: palegreen;
 }
 
 .ShowResultEntries .WrongRow {
   background-color: pink;
+}
+
+.ChatHistory {
+  padding: 0;
+  width: 500px;
+  height: 500px;
+  overflow-y: scroll;
+  border: 1px solid #ccc;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.ChatHistoryRow {
+  border-bottom: 1px solid #ccc;
+}
+
+.ChatHistoryRowNotification {
+  background-color: pink;
+}
+
+.ChatHistoryRowName {
+  float: left;
+  padding: 8px;
+}
+
+.ChatHistoryRowBody {
+  display: block;
+  margin-left: 110px;
+  border-left: 1px solid #ccc;
+  padding: 8px;
 }
