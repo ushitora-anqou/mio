@@ -22,7 +22,7 @@ function fileExists (path) {
 const STAGE = {
   WAITING_QUIZ_MUSIC: 0,
   WAITING_QUIZ_ANSWER: 1,
-  WAITING_QUIZ_RESULT: 2
+  WAITING_QUIZ_RESET: 2
 }
 
 class Database {
@@ -226,8 +226,6 @@ io.on('connection', socket => {
         return
       }
 
-      db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_RESULT)
-
       log('quiz-answer: ' + msg.answer)
 
       io.to(master).emit('quiz-answer', {
@@ -241,12 +239,13 @@ io.on('connection', socket => {
     })
 
     socket.on('quiz-result', (msg, cb) => {
-      if (!db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_RESULT)) {
+      if (!db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) {
         log('quiz-result failed')
         return
       }
 
       log('quiz-result: ' + JSON.stringify(msg))
+      db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_RESET)
 
       socket.to(roomid).emit('quiz-result', msg)
 
@@ -256,7 +255,7 @@ io.on('connection', socket => {
     socket.on('quiz-reset', (msg, cb) => {
       if (
         !(
-          db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_RESULT) &&
+          db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_RESET) &&
           db.getSid(db.getRoomMasterUid(roomid)) !== undefined
         )
       ) {
