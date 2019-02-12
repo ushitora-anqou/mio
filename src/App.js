@@ -247,7 +247,10 @@ function SelectCorrectAnswer (props) {
   return (
     <div className='SelectCorrectAnswer'>
       {isEmpty(answers) ? (
-        <p>Waiting for the answers</p>
+        <div>
+          <p>Waiting for the answers</p>
+          <button onClick={props.onReset}>Reset</button>
+        </div>
       ) : (
         <div>
           <ShowResultEntries
@@ -366,17 +369,10 @@ class SceneView extends Component {
     this.socket = props.socket
     this.state = {
       scene: {
-        kind: this.SCENE.WAIT_MUSIC
-      }
+        kind: null
+      },
+      message: ''
     }
-  }
-
-  componentDidUpdate () {
-    if (
-      this.props.waitForReset &&
-      this.state.scene.kind !== this.SCENE.WAIT_RESET
-    )
-      this._changeScene(this.SCENE.WAIT_RESET)
   }
 
   render () {
@@ -407,6 +403,7 @@ class SceneView extends Component {
             onCheckOk={key => this.handleCheckAnswer(key, true)}
             onCheckNg={key => this.handleCheckAnswer(key, false)}
             onSendResult={this.handleSendAnswerResult}
+            onReset={this.handleResetResult}
             answers={this.state.scene.answers}
           />
         )
@@ -429,17 +426,40 @@ class SceneView extends Component {
         break
     }
 
-    return <div className='SceneView'>{content}</div>
+    return (
+      <div className='SceneView'>
+        <p>{this.state.message}</p>
+        {content}
+      </div>
+    )
   }
 
   _changeScene (kind, data = {}) {
-    this.setState({ scene: { kind, ...data } })
+    this.setState({ scene: { kind, ...data }, message: '' })
   }
 
   _emitAndChangeScene (eventName, arg, sceneKind, sceneData = {}) {
     this.socket.emit(eventName, arg, () => {
       this._changeScene(sceneKind, sceneData)
     })
+  }
+
+  componentDidUpdate (prevProps) {
+    if (this.props.waitForReset && !prevProps.waitForReset) {
+      if (this.props.master) {
+        // TODO: is that correct?
+        // Send quiz-reset because master has lost its connection.
+        const message =
+          "Sorry! The master's connection to the server was lost, so the game has been reset."
+        this.socket.emit('quiz-reset', { message }, () => {
+          this._changeScene(this.SCENE.WAIT_MUSIC)
+          this.props.onQuizReset()
+          this.setState({ message })
+        })
+      } else if (this.state.scene.kind !== this.SCENE.WAIT_RESET) {
+        this._changeScene(this.SCENE.WAIT_RESET)
+      }
+    }
   }
 
   componentDidMount () {
@@ -485,7 +505,11 @@ class SceneView extends Component {
   }
 
   handleResetResult = () => {
-    this._emitAndChangeScene('quiz-reset', {}, this.SCENE.WAIT_MUSIC)
+    this._emitAndChangeScene(
+      'quiz-reset',
+      { message: 'The game master reset the game.' },
+      this.SCENE.WAIT_MUSIC
+    )
   }
 
   handleInputAnswer = (time, answer) => {
@@ -515,9 +539,10 @@ class SceneView extends Component {
     this._changeScene(this.SCENE.SHOW_RESULT, { answers: msg })
   }
 
-  onQuizReset = () => {
+  onQuizReset = msg => {
     this.props.onQuizReset()
     this._changeScene(this.SCENE.WAIT_MUSIC)
+    if (msg.hasOwnProperty('message')) this.setState({ message: msg.message })
   }
 }
 
@@ -556,15 +581,13 @@ class QuizRoom extends Component {
       <div className='QuizRoom'>
         <h1>Hello holo</h1>
         <ConnectionStatus established={this.state.established} />
-        {this.state.established && (
-          <SceneView
-            master={this.master}
-            socket={this.socket}
-            roomid={this.roomid}
-            waitForReset={this.state.shouldWaitForReset}
-            onQuizReset={this.handleQuizReset}
-          />
-        )}
+        <SceneView
+          master={this.master}
+          socket={this.socket}
+          roomid={this.roomid}
+          waitForReset={this.state.shouldWaitForReset}
+          onQuizReset={this.handleQuizReset}
+        />
         <ChatWindow socket={this.socket} />
       </div>
     )

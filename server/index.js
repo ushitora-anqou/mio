@@ -253,12 +253,7 @@ io.on('connection', socket => {
     })
 
     socket.on('quiz-reset', (msg, cb) => {
-      if (
-        !(
-          db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_RESET) &&
-          db.getSid(db.getRoomMasterUid(roomid)) !== undefined
-        )
-      ) {
+      if (!(db.getSid(db.getRoomMasterUid(roomid)) !== undefined)) {
         log('quiz-reset failed')
         return
       }
