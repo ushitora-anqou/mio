@@ -109,17 +109,6 @@ function ChatPostForm (props) {
   )
 }
 
-function changeScene (self, SceneComponent, props) {
-  self.props.changeScene(
-    <SceneComponent
-      changeScene={self.props.changeScene}
-      master={self.props.master}
-      socket={self.props.socket}
-      {...props}
-    />
-  )
-}
-
 class WaitMusic extends Component {
   constructor (props) {
     super(props)
@@ -127,38 +116,23 @@ class WaitMusic extends Component {
     this.inputMusicFile = React.createRef()
   }
 
-  onQuizMusic = msg => {
-    changeScene(this, PlayMusic, { music: msg.buf })
-  }
-
-  componentDidMount () {
-    this.props.socket.on('quiz-music', this.onQuizMusic)
-  }
-
-  componentWillUnmount () {
-    this.props.socket.off('quiz-music', this.onQuizMusic)
-  }
-
-  onSendMusic = e => {
+  handleSubmit = async e => {
     e.preventDefault()
-    const file = this.inputMusicFile.current.files[0]
 
-    readFileAsync(file)
-      .then(buf => {
-        this.props.socket.emit('quiz-music', { buf: buf }, status => {
-          changeScene(this, ShowResult, { judge: true })
-        })
-      })
-      .catch(err => {
-        alert("Can't read the file: not exists?")
-      })
+    const file = this.inputMusicFile.current.files[0]
+    try {
+      const buf = await readFileAsync(file)
+      this.props.onSendMusic(buf)
+    } catch (err) {
+      alert("Can't read the file: not exists?")
+    }
   }
 
   render () {
     return (
       <div className='WaitMusic'>
         {this.props.master && (
-          <form onSubmit={this.onSendMusic}>
+          <form onSubmit={this.handleSubmit}>
             <input type='file' ref={this.inputMusicFile} />
             <button type='submit'>Send</button>
           </form>
@@ -166,6 +140,42 @@ class WaitMusic extends Component {
         <p>Waiting music</p>
       </div>
     )
+  }
+}
+
+class PlayAndAnswer extends Component {
+  constructor (props) {
+    super(props)
+
+    this.state = {
+      scene: (
+        <PlayMusic
+          music={props.music}
+          onClickStart={this.handleStartMusic}
+          onClickStop={this.handleStopMusic}
+        />
+      ),
+      time: null
+    }
+  }
+
+  handleStartMusic = currentTime => {
+    this.startTime = currentTime
+  }
+
+  handleStopMusic = currentTime => {
+    this.setState({
+      time: currentTime - this.startTime,
+      scene: <InputAnswer onSubmit={this.handleSubmit} />
+    })
+  }
+
+  handleSubmit = answer => {
+    this.props.onAnswer(this.state.time, answer)
+  }
+
+  render () {
+    return this.state.scene
   }
 }
 
@@ -182,13 +192,11 @@ class PlayMusic extends Component {
   onClickStart = () => {
     this.setState({ playing: true })
     this.audioCtx = new AudioContext()
-    this.startTime = this.audioCtx.currentTime
+    this.props.onClickStart(this.audioCtx.currentTime)
   }
 
   onClickStop = () => {
-    changeScene(this, InputAnswer, {
-      time: this.audioCtx.currentTime - this.startTime
-    })
+    this.props.onClickStop(this.audioCtx.currentTime)
   }
 
   render () {
@@ -211,134 +219,65 @@ class InputAnswer extends Component {
     this.inputAnswer = React.createRef()
   }
 
-  onSend = () => {
-    this.props.socket.emit(
-      'quiz-answer',
-      { time: this.props.time, answer: this.inputAnswer.current.value },
-      status => {
-        changeScene(this, ShowResult, { judge: false })
-      }
-    )
+  handleSubmit = e => {
+    e.preventDefault()
+    this.props.onSubmit(this.inputAnswer.current.value)
   }
 
   render () {
     return (
       <div className='InputAnswer'>
-        <input type='text' ref={this.inputAnswer} />
-        <button onClick={this.onSend}>Send</button>
+        <form onSubmit={this.handleSubmit}>
+          <input type='text' ref={this.inputAnswer} />
+          <button type='submit'>Send</button>
+        </form>
       </div>
     )
   }
 }
 
-class ShowResult extends Component {
-  constructor (props) {
-    super(props)
-
-    this.state = {
-      judging: props.judge,
-      entries: {}
-    }
-  }
-
-  componentDidMount () {
-    this.props.socket.on('quiz-answer', this.onQuizAnswer)
-    this.props.socket.on('quiz-result', this.onQuizResult)
-    this.props.socket.on('quiz-reset', this.onQuizReset)
-  }
-
-  componentWillUnmount () {
-    this.props.socket.off('quiz-answer', this.onQuizAnswer)
-    this.props.socket.off('quiz-result', this.onQuizResult)
-    this.props.socket.off('quiz-reset', this.onQuizReset)
-  }
-
-  onQuizAnswer = msg => {
-    this.setState((state, props) => {
-      return update(state, {
-        entries: {
-          $merge: {
-            [msg.uid]: msg
-          }
-        }
-      })
-    })
-  }
-
-  onQuizResult = msg => {
-    this.setState({ entries: msg })
-  }
-
-  onQuizReset = () => {
-    changeScene(this, WaitMusic, {})
-  }
-
-  onClickJudge = () => {
-    this.props.socket.emit('quiz-result', this.state.entries, () => {
-      this.setState({ judging: false })
-    })
-  }
-
-  canSendJudge = () => {
-    if (!this.state.judging) return false
-    const entries = this.state.entries
-    if (
-      !Object.keys(entries).every(
-        uid =>
-          entries[uid].hasOwnProperty('time') &&
-          entries[uid].hasOwnProperty('answer') &&
-          entries[uid].hasOwnProperty('judge')
-      )
-    )
-      return false
-    return true
-  }
-
-  onClickOk = uid => {
-    if (this.state.judging)
-      this.setState((state, props) =>
-        update(state, { entries: { [uid]: { judge: { $set: true } } } })
-      )
-  }
-
-  onClickNg = uid => {
-    if (this.state.judging)
-      this.setState((state, props) =>
-        update(state, { entries: { [uid]: { judge: { $set: false } } } })
-      )
-  }
-
-  onClickDone = () => {
-    if (this.props.judge)
-      this.props.socket.emit('quiz-reset', {}, () => {
-        changeScene(this, WaitMusic, {})
-      })
-  }
-
-  render () {
-    return (
-      <div className='ShowResult'>
-        {isEmpty(this.state.entries) ? (
-          <p>Waiting for the result</p>
-        ) : (
-          <div>
-            <ShowResultEntries
-              entries={this.state.entries}
-              onClickOk={this.onClickOk}
-              onClickNg={this.onClickNg}
-              judging={this.state.judging}
-            />
-            {this.canSendJudge() && (
-              <button onClick={this.onClickJudge}>Send</button>
-            )}
-            {!this.state.judging && this.props.judge && (
-              <button onClick={this.onClickDone}>Done</button>
-            )}
-          </div>
-        )}
-      </div>
+function SelectCorrectAnswer (props) {
+  const answers = props.answers
+  const canSendResult = () => {
+    return Object.keys(answers).every(uid =>
+      answers[uid].hasOwnProperty('judge')
     )
   }
+
+  return (
+    <div className='SelectCorrectAnswer'>
+      {isEmpty(answers) ? (
+        <p>Waiting for the answers</p>
+      ) : (
+        <div>
+          <ShowResultEntries
+            entries={answers}
+            onClickOk={props.onCheckOk}
+            onClickNg={props.onCheckNg}
+            judging={true}
+          />
+          {canSendResult() && (
+            <button onClick={props.onSendResult}>Send</button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ShowResult (props) {
+  return (
+    <div className='ShowResult'>
+      {isEmpty(props.answers) ? (
+        <p>Waiting for the result</p>
+      ) : (
+        <div>
+          <ShowResultEntries entries={props.answers} judging={false} />
+          {props.master && <button onClick={props.onReset}>Reset</button>}{' '}
+        </div>
+      )}
+    </div>
+  )
 }
 
 function ShowResultEntries (props) {
@@ -408,23 +347,153 @@ class SceneView extends Component {
   constructor (props) {
     super(props)
 
+    this.SCENE = {
+      WAIT_MUSIC: 0,
+      PLAY_AND_ANSWER: 1,
+      SELECT_CORRECT_ANSWER: 2,
+      SHOW_RESULT: 3
+    }
+
+    this.socket = props.socket
     this.state = {
-      scene: (
-        <WaitMusic
-          changeScene={this.changeScene}
-          socket={this.props.socket}
-          master={this.props.master}
-        />
-      )
+      scene: { kind: this.SCENE.WAIT_MUSIC }
     }
   }
 
-  changeScene = scene => {
-    this.setState({ scene: scene })
+  render () {
+    const S = this.SCENE
+    let content = null
+
+    switch (this.state.scene.kind) {
+      case S.WAIT_MUSIC:
+        content = this.props.master ? (
+          <WaitMusic master={true} onSendMusic={this.handleSendMusic} />
+        ) : (
+          <WaitMusic master={false} />
+        )
+        break
+
+      case S.PLAY_AND_ANSWER:
+        content = (
+          <PlayAndAnswer
+            music={this.state.scene.music}
+            onAnswer={this.handleInputAnswer}
+          />
+        )
+        break
+
+      case S.SELECT_CORRECT_ANSWER:
+        content = (
+          <SelectCorrectAnswer
+            onCheckOk={key => this.handleCheckAnswer(key, true)}
+            onCheckNg={key => this.handleCheckAnswer(key, false)}
+            onSendResult={this.handleSendAnswerResult}
+            answers={this.state.scene.answers}
+          />
+        )
+        break
+
+      case S.SHOW_RESULT:
+        content = this.props.master ? (
+          <ShowResult
+            answers={this.state.scene.answers}
+            master={true}
+            onReset={this.handleResetResult}
+          />
+        ) : (
+          <ShowResult answers={this.state.scene.answers} master={false} />
+        )
+        break
+    }
+
+    return <div className='SceneView'>{content}</div>
   }
 
-  render () {
-    return <div className='SceneView'>{this.state.scene}</div>
+  _changeScene (kind, data = {}) {
+    this.setState({ scene: { kind, ...data } })
+  }
+
+  _emitAndChangeScene (eventName, arg, sceneKind, sceneData = {}) {
+    this.socket.emit(eventName, arg, () => {
+      this._changeScene(sceneKind, sceneData)
+    })
+  }
+
+  componentDidMount () {
+    this._changeScene(this.SCENE.WAIT_MUSIC)
+
+    this.socket.on('quiz-music', this.onQuizMusic)
+    this.socket.on('quiz-answer', this.onQuizAnswer)
+    this.socket.on('quiz-result', this.onQuizResult)
+    this.socket.on('quiz-reset', this.onQuizReset)
+  }
+
+  componentWillUnmount () {
+    this.socket.off('quiz-music', this.onQuizMusic)
+    this.socket.off('quiz-answer', this.onQuizAnswer)
+    this.socket.off('quiz-result', this.onQuizResult)
+    this.socket.off('quiz-reset', this.onQuizReset)
+  }
+
+  // Handler for scenes' events
+
+  handleSendMusic = music => {
+    this._emitAndChangeScene(
+      'quiz-music',
+      { buf: music },
+      this.SCENE.SELECT_CORRECT_ANSWER,
+      { answers: {} }
+    )
+  }
+
+  handleCheckAnswer = (key, correct) => {
+    this.setState((state, props) => ({
+      scene: update(state.scene, {
+        answers: { [key]: { judge: { $set: correct } } }
+      })
+    }))
+  }
+
+  handleSendAnswerResult = () => {
+    const answers = this.state.scene.answers
+    this._emitAndChangeScene('quiz-result', answers, this.SCENE.SHOW_RESULT, {
+      answers
+    })
+  }
+
+  handleResetResult = () => {
+    this._emitAndChangeScene('quiz-reset', {}, this.SCENE.WAIT_MUSIC)
+  }
+
+  handleInputAnswer = (time, answer) => {
+    this._emitAndChangeScene(
+      'quiz-answer',
+      { time, answer },
+      this.SCENE.SHOW_RESULT,
+      { answers: {} }
+    )
+  }
+
+  // Handlers for socket
+  onQuizMusic = msg => {
+    this._changeScene(this.SCENE.PLAY_AND_ANSWER, { music: msg.buf })
+  }
+
+  onQuizAnswer = msg => {
+    // append answer
+    this.setState((state, props) => ({
+      scene: update(state.scene, {
+        answers: { $merge: { [msg.uid]: msg } }
+      })
+    }))
+  }
+
+  onQuizResult = msg => {
+    this._changeScene(this.SCENE.SHOW_RESULT, { answers: msg })
+  }
+
+  onQuizReset = () => {
+    this._changeScene(this.SCENE.WAIT_MUSIC)
   }
 }
 
