@@ -47,12 +47,6 @@ class ChatWindow extends Component {
     this.inputMsg = React.createRef()
   }
 
-  onChatMsg = msg => {
-    this.setState((state, props) =>
-      update(state, { history: { $push: [msg] } })
-    )
-  }
-
   componentDidMount () {
     this.props.socket.on('chat-msg', this.onChatMsg)
   }
@@ -61,12 +55,18 @@ class ChatWindow extends Component {
     this.props.socket.off('chat-msg', this.onChatMsg)
   }
 
+  onChatMsg = msg => {
+    this.setState((state, props) =>
+      update(state, { history: { $push: [msg] } })
+    )
+  }
+
   handleSubmit = e => {
     e.preventDefault()
 
     const body = this.inputMsg.current.value
     if (body !== '') {
-      this.props.socket.emit('chat-msg', body, status => {
+      this.props.socket.emit('chat-msg', { body, tag: 'message' }, () => {
         this.inputMsg.current.value = ''
       })
     }
@@ -92,7 +92,9 @@ function ChatHistory (props) {
         {props.history.map(msg => (
           <tr key={msg.mid}>
             <td>{msg.name}</td>
-            <td>{msg.body}</td>
+            {msg.tag === 'message' && <td>{msg.body}</td>}
+            {msg.tag === 'join' && <td>joined</td>}
+            {msg.tag === 'leave' && <td>left</td>}
           </tr>
         ))}
       </tbody>

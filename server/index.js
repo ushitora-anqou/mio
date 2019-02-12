@@ -179,18 +179,23 @@ io.on('connection', socket => {
     // if (!room.hasOwnProperty(roomid))  return false
 
     socket.join(roomid)
+    db.setSid(uid, socket.id)
     log('auth')
 
-    db.setSid(uid, socket.id)
-
-    socket.on('chat-msg', (msg, cb) => {
-      log('chat-msg: ' + msg)
+    const sendChatMsg = (tag, body = '') => {
+      body = body || ''
       io.to(roomid).emit('chat-msg', {
         mid: uuid(),
         uid: uid,
         name: db.getNameOf(uid),
-        body: msg
+        body: body,
+        tag: tag
       })
+    }
+
+    socket.on('chat-msg', (msg, cb) => {
+      log('chat-msg: ' + msg)
+      sendChatMsg(msg.tag, msg.body)
       cb()
     })
 
@@ -269,6 +274,7 @@ io.on('connection', socket => {
 
     socket.on('disconnect', () => {
       log('Leave')
+      sendChatMsg('leave')
 
       db.deleteSidOf(uid)
 
@@ -278,6 +284,8 @@ io.on('connection', socket => {
         db.deleteRoom(roomid)
       }
     })
+
+    sendChatMsg('join')
 
     socket.emit('auth-result', {
       status: 'ok',
