@@ -525,6 +525,7 @@ class SceneView extends Component {
   componentDidMount () {
     this._changeScene(this.SCENE.WAIT_MUSIC)
 
+    this.socket.on('error', this.onError)
     this.socket.on('quiz-music', this.onQuizMusic)
     this.socket.on('quiz-answer', this.onQuizAnswer)
     this.socket.on('quiz-result', this.onQuizResult)
@@ -532,6 +533,7 @@ class SceneView extends Component {
   }
 
   componentWillUnmount () {
+    this.socket.off('error', this.onError)
     this.socket.off('quiz-music', this.onQuizMusic)
     this.socket.off('quiz-answer', this.onQuizAnswer)
     this.socket.off('quiz-result', this.onQuizResult)
@@ -589,6 +591,12 @@ class SceneView extends Component {
   }
 
   // Handlers for socket
+  onError = err => {
+    this.setState({
+      message: `Unexpected error. Contact anqou. (${JSON.stringify(err)})`
+    })
+  }
+
   onQuizMusic = msg => {
     this._changeScene(this.SCENE.PLAY_AND_ANSWER, { music: msg.buf })
   }

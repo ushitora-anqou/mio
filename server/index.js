@@ -149,6 +149,10 @@ io.on('connection', socket => {
 
   log('Connect')
 
+  socket.on('error', err => {
+    log('Error: ' + JSON.stringify(err))
+  })
+
   socket.on('create-room', (param, cb) => {
     const { uid, password, roomid } = db.createRoom(param.masterName)
     cb(uid, password, roomid)
