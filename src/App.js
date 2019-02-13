@@ -185,8 +185,8 @@ class PlayAndAnswer extends Component {
       scene: (
         <PlayMusic
           music={props.music}
-          onClickStart={this.handleStartMusic}
-          onClickStop={this.handleStopMusic}
+          onMusicStart={this.handleStartMusic}
+          onMusicStop={this.handleStopMusic}
           onFailToLoad={props.onFailToLoad}
         />
       ),
@@ -238,18 +238,20 @@ class PlayMusic extends Component {
   onClickStart = () => {
     if (this.state.music_buf) {
       this.setState({ playing: true })
-      this.props.onClickStart(this.audioCtx.currentTime)
+      this.props.onMusicStart(this.audioCtx.currentTime)
 
       // play the music
       this.source = this.audioCtx.createBufferSource()
       this.source.buffer = this.state.music_buf
       this.source.connect(this.audioCtx.destination)
+      this.source.onended = () => {
+        this.props.onMusicStop(this.audioCtx.currentTime)
+      }
       this.source.start(0)
     }
   }
 
   onClickStop = () => {
-    this.props.onClickStop(this.audioCtx.currentTime)
     this.source.stop()
   }
 
