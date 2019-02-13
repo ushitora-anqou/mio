@@ -25,33 +25,11 @@ const STAGE = {
   WAITING_QUIZ_RESET: 2
 }
 
-class Database {
-  constructor (options) {
-    this.testing = options.testing
-    this.room_json = options.room_json
-    this.user_json = options.user_json
-
-    this.room =
-      fileExists(this.room_json) && !this.testing
-        ? JSON.parse(fs.readFileSync(this.room_json))
-        : {}
-    this.user =
-      fileExists(this.user_json) && !this.testing
-        ? JSON.parse(fs.readFileSync(this.user_json))
-        : {}
+class NaiveDatabase {
+  constructor (room, user) {
+    this.room = room
+    this.user = user
     this.uid2sid = {}
-
-    this.shutdownGracefully = this.shutdownGracefully.bind(this)
-    process.on('SIGTERM', this.shutdownGracefully)
-    process.on('SIGINT', this.shutdownGracefully)
-  }
-
-  shutdownGracefully () {
-    if (!this.testing) {
-      fs.writeFileSync(this.room_json, JSON.stringify(this.room))
-      fs.writeFileSync(this.user_json, JSON.stringify(this.user))
-    }
-    process.exit(0)
   }
 
   createUser (roomid, name) {
@@ -130,7 +108,37 @@ class Database {
   }
 }
 
-const db = new Database({
+class JSONDatabase extends NaiveDatabase {
+  constructor (options) {
+    const room =
+      fileExists(options.room_json) && !options.testing
+        ? JSON.parse(fs.readFileSync(options.room_json))
+        : {}
+    const user =
+      fileExists(options.user_json) && !options.testing
+        ? JSON.parse(fs.readFileSync(options.user_json))
+        : {}
+    super(room, user)
+
+    this.testing = options.testing
+    this.room_json = options.room_json
+    this.user_json = options.user_json
+
+    this.shutdownGracefully = this.shutdownGracefully.bind(this)
+    process.on('SIGTERM', this.shutdownGracefully)
+    process.on('SIGINT', this.shutdownGracefully)
+  }
+
+  shutdownGracefully () {
+    if (!this.testing) {
+      fs.writeFileSync(this.room_json, JSON.stringify(this.room))
+      fs.writeFileSync(this.user_json, JSON.stringify(this.user))
+    }
+    process.exit(0)
+  }
+}
+
+const db = new JSONDatabase({
   testing,
   room_json: 'room.json',
   user_json: 'user.json'
