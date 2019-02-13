@@ -108,6 +108,12 @@ class NaiveDatabase {
   getNameOf (uid) {
     return this.user[uid].name
   }
+
+  setAllRoomStage (stage) {
+    Object.keys(this.room).forEach(roomid => {
+      this.room[roomid].stage = stage
+    })
+  }
 }
 
 class JSONDatabase extends NaiveDatabase {
@@ -194,6 +200,9 @@ async function main () {
   server.listen(port)
   console_log('start listening at port ' + port)
 
+  // initialize db
+  db.setAllRoomStage(STAGE.WAITING_QUIZ_MUSIC)
+
   io.on('connection', socket => {
     const log = msg => {
       console_log('[' + socket.id + '] ' + msg)
@@ -237,9 +246,6 @@ async function main () {
       socket.join(roomid)
       db.setSid(uid, socket.id)
       log('auth')
-
-      if (db.getRoomMasterUid(roomid) === uid)
-        db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
 
       const sendChatMsg = (tag, body = '') => {
         body = body || ''
