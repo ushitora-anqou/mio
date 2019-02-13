@@ -11,7 +11,7 @@ import update from 'immutability-helper'
 import './App.css'
 import { config } from './config'
 
-const encodeToWav = require('audiobuffer-to-wav')
+const lamejs = require('lamejs')
 const AudioContext = window.AudioContext || window.webkitAudioContext
 
 // thanks to https://simon-schraeder.de/posts/filereader-async/
@@ -29,11 +29,18 @@ function readFileAsync (file) {
   })
 }
 
-async function extractHeadOfMusic (encodedBuf, seconds, sampleRate) {
+async function extractHeadOfMusic (
+  encodedBuf,
+  seconds,
+  channels,
+  sampleRate,
+  kbps
+) {
+  // get PCM wave of the head of the music
   const audioCtx = new AudioContext()
   const decodedBuf = await audioCtx.decodeAudioData(encodedBuf)
   const offlineCtx = new OfflineAudioContext(
-    2,
+    channels,
     sampleRate * seconds,
     sampleRate
   )
@@ -42,7 +49,16 @@ async function extractHeadOfMusic (encodedBuf, seconds, sampleRate) {
   source.connect(offlineCtx.destination)
   source.start()
   const renderedBuf = await offlineCtx.startRendering()
-  return encodeToWav(renderedBuf)
+
+  // convert PCM to MP3 by using lamejs
+  const float2int = buf => Int16Array.from(buf, x => x * 0x8000)
+  const leftSamples = float2int(renderedBuf.getChannelData(0))
+  const rightSamples = float2int(renderedBuf.getChannelData(1))
+  const mp3encoder = new lamejs.Mp3Encoder(channels, sampleRate, kbps)
+  const data = []
+  data.push(Buffer.from(mp3encoder.encodeBuffer(leftSamples, rightSamples)))
+  data.push(Buffer.from(mp3encoder.flush()))
+  return Buffer.concat(data)
 }
 
 function isEmpty (obj) {
@@ -164,20 +180,38 @@ class WaitMusic extends Component {
   constructor (props) {
     super(props)
 
+    this.state = { sending: false }
+
     this.inputMusicFile = React.createRef()
   }
 
   handleSubmit = async e => {
     e.preventDefault()
+    this.setState({ sending: true })
 
+    let musicBuf = null
     try {
+      if (this.inputMusicFile.current.files.length !== 1)
+        throw new Error('The number of specified files should be one.')
       const file = this.inputMusicFile.current.files[0]
-      if (file.size > 10000000) throw 'too big'
-      const buf = await extractHeadOfMusic(await readFileAsync(file), 10, 44100)
-      this.props.onSendMusic(buf)
+      if (file.size > 10000000) throw new Error('The file is too big.')
+      musicBuf = await extractHeadOfMusic(
+        await readFileAsync(file),
+        15,
+        2,
+        44100,
+        128
+      )
+      if (!musicBuf)
+        new Error(
+          'Unexpected error occured in conversion of the music file to MP3.'
+        )
     } catch (err) {
       this.props.onFailToLoad(err)
     }
+
+    this.setState({ sending: false })
+    if (musicBuf) this.props.onSendMusic(musicBuf)
   }
 
   render () {
@@ -186,7 +220,9 @@ class WaitMusic extends Component {
         {this.props.master && (
           <form onSubmit={this.handleSubmit}>
             <input type='file' accept='audio/*' ref={this.inputMusicFile} />
-            <button type='submit'>Send</button>
+            <button type='submit' disabled={this.state.sending}>
+              Send
+            </button>
           </form>
         )}
         <p>Waiting music</p>
@@ -624,7 +660,9 @@ class SceneView extends Component {
   // Handlers for socket
   onError = err => {
     this.setState({
-      message: `Unexpected error. Contact anqou. (${JSON.stringify(err)})`
+      message: `Unexpected error occurred. Contact anqou. (${JSON.stringify(
+        err
+      )})`
     })
   }
 
