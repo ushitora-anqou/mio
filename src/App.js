@@ -187,6 +187,7 @@ class PlayAndAnswer extends Component {
           music={props.music}
           onClickStart={this.handleStartMusic}
           onClickStop={this.handleStopMusic}
+          onFailToLoad={props.onFailToLoad}
         />
       ),
       time: null
@@ -222,9 +223,16 @@ class PlayMusic extends Component {
       music_buf: null
     }
     this.audioCtx = new AudioContext()
-    this.audioCtx.decodeAudioData(props.music, buf => {
-      this.setState({ music_buf: buf })
-    })
+    this.audioCtx
+      .decodeAudioData(props.music)
+      .then(buf => {
+        this.setState({ music_buf: buf })
+      })
+      .catch(err => {
+        // Can't load the music file.
+        // TODO: What is the BA?
+        props.onFailToLoad()
+      })
   }
 
   onClickStart = () => {
@@ -444,6 +452,7 @@ class SceneView extends Component {
           <PlayAndAnswer
             music={this.state.scene.music}
             onAnswer={this.handleInputAnswer}
+            onFailToLoad={this.handleFailToLoadMusicToPlay}
           />
         )
         break
@@ -530,6 +539,13 @@ class SceneView extends Component {
   }
 
   // Handler for scenes' events
+  handleFailToLoadMusicToPlay = () => {
+    this._changeScene(this.SCENE.WAIT_RESET)
+    this.setState({
+      message:
+        "Sorry! Can't load the sent music file. Something may be wrong with the server or the game master."
+    })
+  }
 
   handleSendMusic = music => {
     this._emitAndChangeScene(
