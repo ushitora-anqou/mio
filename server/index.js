@@ -137,7 +137,8 @@ const db = new Database({
 })
 const server = http.createServer()
 const io = socketio(server, {
-  serveClient: false
+  serveClient: false,
+  maxHttpBufferSize: 1000000
 })
 server.listen(port)
 console_log('start listening at port ' + port)
