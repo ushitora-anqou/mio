@@ -4,7 +4,7 @@ const http = require('http')
 const socketio = require('socket.io')
 const Redis = require('ioredis')
 
-const port = process.env.PORT || 4000
+const port = 4000
 const testing = process.env.MIO_TEST ? true : false
 const redisUrl = process.env.REDIS_URL || '127.0.0.1:6379'
 
