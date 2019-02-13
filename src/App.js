@@ -11,6 +11,7 @@ import update from 'immutability-helper'
 import './App.css'
 import { config } from './config'
 
+const encodeToWav = require('audiobuffer-to-wav')
 const AudioContext = window.AudioContext || window.webkitAudioContext
 
 // thanks to https://simon-schraeder.de/posts/filereader-async/
@@ -26,6 +27,22 @@ function readFileAsync (file) {
 
     reader.readAsArrayBuffer(file)
   })
+}
+
+async function extractHeadOfMusic (encodedBuf, seconds, sampleRate) {
+  const audioCtx = new AudioContext()
+  const decodedBuf = await audioCtx.decodeAudioData(encodedBuf)
+  const offlineCtx = new OfflineAudioContext(
+    2,
+    sampleRate * seconds,
+    sampleRate
+  )
+  const source = offlineCtx.createBufferSource()
+  source.buffer = decodedBuf
+  source.connect(offlineCtx.destination)
+  source.start()
+  const renderedBuf = await offlineCtx.startRendering()
+  return encodeToWav(renderedBuf)
 }
 
 function isEmpty (obj) {
@@ -156,7 +173,7 @@ class WaitMusic extends Component {
     try {
       const file = this.inputMusicFile.current.files[0]
       if (file.size > 10000000) throw 'too big'
-      const buf = await readFileAsync(file)
+      const buf = await extractHeadOfMusic(await readFileAsync(file), 10, 44100)
       this.props.onSendMusic(buf)
     } catch (err) {
       this.props.onFailToLoad(err)
