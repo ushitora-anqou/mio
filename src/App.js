@@ -153,12 +153,13 @@ class WaitMusic extends Component {
   handleSubmit = async e => {
     e.preventDefault()
 
-    const file = this.inputMusicFile.current.files[0]
     try {
+      const file = this.inputMusicFile.current.files[0]
+      if (file.size > 10000000) throw 'too big'
       const buf = await readFileAsync(file)
       this.props.onSendMusic(buf)
     } catch (err) {
-      alert("Can't read the file: not exists?")
+      this.props.onFailToLoad(err)
     }
   }
 
@@ -443,7 +444,11 @@ class SceneView extends Component {
     switch (this.state.scene.kind) {
       case S.WAIT_MUSIC:
         content = this.props.master ? (
-          <WaitMusic master={true} onSendMusic={this.handleSendMusic} />
+          <WaitMusic
+            master={true}
+            onSendMusic={this.handleSendMusic}
+            onFailToLoad={this.handleFailToLoadMusicToSend}
+          />
         ) : (
           <WaitMusic master={false} />
         )
@@ -543,6 +548,13 @@ class SceneView extends Component {
   }
 
   // Handler for scenes' events
+  handleFailToLoadMusicToSend = () => {
+    this.setState({
+      message:
+        "Can't load the music file to be sent. The file may be too big or not exist?"
+    })
+  }
+
   handleFailToLoadMusicToPlay = () => {
     this._changeScene(this.SCENE.WAIT_RESET)
     this.setState({
