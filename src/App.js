@@ -65,6 +65,10 @@ function isEmpty (obj) {
   return Object.keys(obj).length === 0
 }
 
+function isPrintable (str) {
+  return !/^[ \t\n　]*$/.test(str)
+}
+
 function newSocket () {
   return io(config.server_uri)
 }
@@ -98,7 +102,7 @@ class ChatWindow extends Component {
     e.preventDefault()
 
     const body = this.inputMsg.current.value
-    if (body !== '') {
+    if (isPrintable(body)) {
       this.props.socket.emit('chat-msg', { body, tag: 'message' }, () => {
         this.inputMsg.current.value = ''
       })
@@ -336,14 +340,18 @@ class InputAnswer extends Component {
 
   handleSubmit = e => {
     e.preventDefault()
-    this.props.onSubmit(this.inputAnswer.current.value)
+    if (isPrintable(this.inputAnswer.current.value))
+      this.props.onSubmit(this.inputAnswer.current.value)
   }
 
   render () {
     return (
       <div className='InputAnswer'>
         <form onSubmit={this.handleSubmit}>
-          <input type='text' ref={this.inputAnswer} />
+          <label>
+            Answer:
+            <input type='text' ref={this.inputAnswer} />
+          </label>
           <button type='submit'>Send</button>
         </form>
       </div>
@@ -812,6 +820,8 @@ class IssueAccount extends Component {
   handleSubmit = e => {
     e.preventDefault()
 
+    if (!isPrintable(this.inputName.current.value)) return
+
     this.socket = newSocket()
     this.socket.emit(
       'issue-uid',
@@ -882,6 +892,9 @@ class CreateRoom extends Component {
 
   onSubmit = e => {
     e.preventDefault()
+
+    if (!isPrintable(this.inputName.current.value)) return
+
     this.socket.emit(
       'create-room',
       { masterName: this.inputName.current.value },
