@@ -2,9 +2,11 @@ const uuid = require('uuid/v4')
 const fs = require('fs')
 const http = require('http')
 const socketio = require('socket.io')
+const Redis = require('ioredis')
 
 const port = process.env.PORT || 4000
 const testing = process.env.MIO_TEST ? true : false
+const redisUrl = process.env.REDIS_URL || '127.0.0.1:6379'
 
 function console_log (str) {
   testing || console.log(str)
@@ -138,176 +140,220 @@ class JSONDatabase extends NaiveDatabase {
   }
 }
 
-const db = new JSONDatabase({
-  testing,
-  room_json: 'room.json',
-  user_json: 'user.json'
-})
-const server = http.createServer()
-const io = socketio(server, {
-  serveClient: false,
-  maxHttpBufferSize: 500000
-})
-server.listen(port)
-console_log('start listening at port ' + port)
+class RedisDatabase extends NaiveDatabase {
+  constructor (options) {
+    super(options.room, options.user)
+    this.options = options
 
-io.on('connection', socket => {
-  const log = msg => {
-    console_log('[' + socket.id + '] ' + msg)
+    this.shutdownGracefully = this.shutdownGracefully.bind(this)
+    process.on('SIGTERM', this.shutdownGracefully)
+    process.on('SIGINT', this.shutdownGracefully)
   }
 
-  log('Connect')
-
-  socket.on('error', err => {
-    log('Error: ' + JSON.stringify(err))
-  })
-
-  socket.on('create-room', (param, cb) => {
-    const { uid, password, roomid } = db.createRoom(param.masterName)
-    cb(uid, password, roomid)
-  })
-
-  socket.on('issue-uid', (param, cb) => {
-    const roomid = param.roomid
-    if (!db.roomExists(roomid)) {
-      log('roomid ' + roomid + ' not found')
-      cb(null, null)
-      return
+  shutdownGracefully () {
+    if (!this.options.testing) {
+      this.options.redis.set(this.options.room_key, JSON.stringify(this.room))
+      this.options.redis.set(this.options.user_key, JSON.stringify(this.user))
     }
-    const { uid, password } = db.createUser(roomid, param.name)
-    cb(uid, password)
-  })
+    process.exit(0)
+  }
+}
 
-  socket.emit('auth', {}, (uid, password, roomid) => {
+async function newRedisDatabase (testing = false) {
+  const room_key = 'mio:room'
+  const user_key = 'mio:user'
+  const redis = new Redis(redisUrl)
+
+  const room_json = await redis.get(room_key)
+  const user_json = await redis.get(user_key)
+  const room = room_json ? JSON.parse(room_json) : {}
+  const user = user_json ? JSON.parse(user_json) : {}
+
+  return new RedisDatabase({
+    redis,
+    room,
+    user,
+    room_key,
+    user_key,
+    testing
+  })
+}
+
+async function main () {
+  //const db = new JSONDatabase({
+  //  testing,
+  //  room_json: 'room.json',
+  //  user_json: 'user.json'
+  //})
+  const db = await newRedisDatabase()
+  const server = http.createServer()
+  const io = socketio(server, {
+    serveClient: false,
+    maxHttpBufferSize: 500000
+  })
+  server.listen(port)
+  console_log('start listening at port ' + port)
+
+  io.on('connection', socket => {
     const log = msg => {
-      console_log(`[${socket.id}][${uid} / ${roomid}] ${msg}`)
+      console_log('[' + socket.id + '] ' + msg)
     }
 
-    // check uid and password are correct
-    if (!db.userExists(uid, password, roomid)) {
-      log('auth failed ' + uid)
-      socket.emit('auth-result', { status: 'ng' })
+    log('Connect')
+
+    socket.on('error', err => {
+      log('Error: ' + JSON.stringify(err))
+    })
+
+    socket.on('create-room', (param, cb) => {
+      const { uid, password, roomid } = db.createRoom(param.masterName)
+      cb(uid, password, roomid)
+    })
+
+    socket.on('issue-uid', (param, cb) => {
+      const roomid = param.roomid
+      if (!db.roomExists(roomid)) {
+        log('roomid ' + roomid + ' not found')
+        cb(null, null)
+        return
+      }
+      const { uid, password } = db.createUser(roomid, param.name)
+      cb(uid, password)
+    })
+
+    socket.emit('auth', {}, (uid, password, roomid) => {
+      const log = msg => {
+        console_log(`[${socket.id}][${uid} / ${roomid}] ${msg}`)
+      }
+
+      // check uid and password are correct
+      if (!db.userExists(uid, password, roomid)) {
+        log('auth failed ' + uid)
+        socket.emit('auth-result', { status: 'ng' })
+        return
+      }
+      // if (!room.hasOwnProperty(roomid))  return false
+
+      socket.join(roomid)
+      db.setSid(uid, socket.id)
+      log('auth')
+
+      if (db.getRoomMasterUid(roomid) === uid)
+        db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
+
+      const sendChatMsg = (tag, body = '') => {
+        body = body || ''
+        io.to(roomid).emit('chat-msg', {
+          mid: uuid(),
+          uid: uid,
+          name: db.getNameOf(uid),
+          body: body,
+          tag: tag
+        })
+      }
+
+      socket.on('chat-msg', (msg, cb) => {
+        //log('chat-msg: ' + msg)
+        sendChatMsg(msg.tag, msg.body)
+        cb()
+      })
+
+      socket.on('quiz-music', (msg, cb) => {
+        if (
+          !(
+            db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC) &&
+            db.getRoomMasterUid(roomid) === uid
+          )
+        ) {
+          log('quiz-music failed')
+          return
+        }
+
+        db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)
+
+        log('quiz-music: ' + msg.buf.length)
+
+        socket.to(roomid).emit('quiz-music', msg)
+        cb()
+      })
+
+      socket.on('quiz-answer', (msg, cb) => {
+        const master = db.getSid(db.getRoomMasterUid(roomid))
+
+        if (
+          !(
+            db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER) &&
+            master !== undefined
+          )
+        ) {
+          log('quiz-answer failed')
+          return
+        }
+
+        log('quiz-answer: ' + msg.answer)
+
+        io.to(master).emit('quiz-answer', {
+          uid: uid,
+          time: msg.time,
+          answer: msg.answer,
+          name: db.getNameOf(uid)
+        })
+
+        cb()
+      })
+
+      socket.on('quiz-result', (msg, cb) => {
+        if (!db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) {
+          log('quiz-result failed')
+          return
+        }
+
+        log('quiz-result: ' + JSON.stringify(msg))
+        db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_RESET)
+
+        socket.to(roomid).emit('quiz-result', msg)
+
+        cb()
+      })
+
+      socket.on('quiz-reset', (msg, cb) => {
+        if (!(db.getSid(db.getRoomMasterUid(roomid)) !== undefined)) {
+          log('quiz-reset failed')
+          return
+        }
+
+        db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
+
+        log('quiz-reset')
+
+        socket.to(roomid).emit('quiz-reset', msg)
+
+        cb()
+      })
+
+      socket.on('disconnect', () => {
+        log('Leave')
+        sendChatMsg('leave')
+
+        db.deleteSidOf(uid)
+
+        // Delete the room if no one is connecting to it
+        if (!db.isAnyoneIn(roomid)) {
+          log('Delete room')
+          db.deleteRoom(roomid)
+        }
+      })
+
+      sendChatMsg('join')
+
+      socket.emit('auth-result', {
+        status: 'ok',
+        shouldWaitForReset: !db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
+      })
+
       return
-    }
-    // if (!room.hasOwnProperty(roomid))  return false
-
-    socket.join(roomid)
-    db.setSid(uid, socket.id)
-    log('auth')
-
-    if (db.getRoomMasterUid(roomid) === uid)
-      db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
-
-    const sendChatMsg = (tag, body = '') => {
-      body = body || ''
-      io.to(roomid).emit('chat-msg', {
-        mid: uuid(),
-        uid: uid,
-        name: db.getNameOf(uid),
-        body: body,
-        tag: tag
-      })
-    }
-
-    socket.on('chat-msg', (msg, cb) => {
-      //log('chat-msg: ' + msg)
-      sendChatMsg(msg.tag, msg.body)
-      cb()
     })
-
-    socket.on('quiz-music', (msg, cb) => {
-      if (
-        !(
-          db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC) &&
-          db.getRoomMasterUid(roomid) === uid
-        )
-      ) {
-        log('quiz-music failed')
-        return
-      }
-
-      db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)
-
-      log('quiz-music: ' + msg.buf.length)
-
-      socket.to(roomid).emit('quiz-music', msg)
-      cb()
-    })
-
-    socket.on('quiz-answer', (msg, cb) => {
-      const master = db.getSid(db.getRoomMasterUid(roomid))
-
-      if (
-        !(
-          db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER) &&
-          master !== undefined
-        )
-      ) {
-        log('quiz-answer failed')
-        return
-      }
-
-      log('quiz-answer: ' + msg.answer)
-
-      io.to(master).emit('quiz-answer', {
-        uid: uid,
-        time: msg.time,
-        answer: msg.answer,
-        name: db.getNameOf(uid)
-      })
-
-      cb()
-    })
-
-    socket.on('quiz-result', (msg, cb) => {
-      if (!db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) {
-        log('quiz-result failed')
-        return
-      }
-
-      log('quiz-result: ' + JSON.stringify(msg))
-      db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_RESET)
-
-      socket.to(roomid).emit('quiz-result', msg)
-
-      cb()
-    })
-
-    socket.on('quiz-reset', (msg, cb) => {
-      if (!(db.getSid(db.getRoomMasterUid(roomid)) !== undefined)) {
-        log('quiz-reset failed')
-        return
-      }
-
-      db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
-
-      log('quiz-reset')
-
-      socket.to(roomid).emit('quiz-reset', msg)
-
-      cb()
-    })
-
-    socket.on('disconnect', () => {
-      log('Leave')
-      sendChatMsg('leave')
-
-      db.deleteSidOf(uid)
-
-      // Delete the room if no one is connecting to it
-      if (!db.isAnyoneIn(roomid)) {
-        log('Delete room')
-        db.deleteRoom(roomid)
-      }
-    })
-
-    sendChatMsg('join')
-
-    socket.emit('auth-result', {
-      status: 'ok',
-      shouldWaitForReset: !db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
-    })
-
-    return
   })
-})
+}
+
+main()
