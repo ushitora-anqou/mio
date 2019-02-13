@@ -564,21 +564,27 @@ class SceneView extends Component {
     })
   }
 
+  _checkScene (kind) {
+    return this.state.scene.kind === kind
+  }
+
   componentDidUpdate (prevProps) {
-    if (this.props.waitForReset && !prevProps.waitForReset) {
-      if (this.props.master) {
-        // TODO: is that correct?
-        // Send quiz-reset because master has lost its connection.
+    if (this.props.didAuth) {
+      // change scene to WAIT_MUSIC or WAIT_RESET after authentication
+      if (
+        !this.props.master &&
+        this.props.waitForReset &&
+        !this._checkScene(this.SCENE.WAIT_RESET)
+      ) {
+        this._changeScene(this.SCENE.WAIT_RESET)
+      } else if (!this._checkScene(this.SCENE.WAIT_MUSIC)) {
+        this._changeScene(this.SCENE.WAIT_MUSIC)
         const message =
           "Sorry! The master's connection to the server was lost, so the game has been reset."
-        this.socket.emit('quiz-reset', { message }, () => {
-          this._changeScene(this.SCENE.WAIT_MUSIC)
-          this.props.onQuizReset()
-          this.setState({ message })
-        })
-      } else if (this.state.scene.kind !== this.SCENE.WAIT_RESET) {
-        this._changeScene(this.SCENE.WAIT_RESET)
+        this.setState({ message })
       }
+
+      this.props.onProcessForAuth()
     }
   }
 
@@ -680,11 +686,11 @@ class SceneView extends Component {
   }
 
   onQuizResult = msg => {
+    if (!this._checkScene(this.SCENE.SHOW_RESULT)) return
     this._changeScene(this.SCENE.SHOW_RESULT, { answers: msg })
   }
 
   onQuizReset = msg => {
-    this.props.onQuizReset()
     this._changeScene(this.SCENE.WAIT_MUSIC)
     if (msg.hasOwnProperty('message')) this.setState({ message: msg.message })
   }
@@ -696,6 +702,7 @@ class QuizRoom extends Component {
     this.state = {
       socket: newSocket(),
       shouldWaitForReset: false,
+      didAuth: false,
       established: null // connecting
     }
     this.roomid = props.roomid
@@ -709,7 +716,11 @@ class QuizRoom extends Component {
       cb(this.uid, this.password, this.roomid)
     })
     this.socket.on('auth-result', ({ status, shouldWaitForReset }) => {
-      this.setState({ established: status === 'ok', shouldWaitForReset })
+      this.setState({
+        established: status === 'ok',
+        shouldWaitForReset,
+        didAuth: true
+      })
     })
     this.socket.on('disconnect', () => {
       this.setState({ established: null })
@@ -729,16 +740,17 @@ class QuizRoom extends Component {
           master={this.master}
           socket={this.socket}
           roomid={this.roomid}
+          didAuth={this.state.didAuth}
           waitForReset={this.state.shouldWaitForReset}
-          onQuizReset={this.handleQuizReset}
+          onProcessForAuth={this.handleProcessForAuth}
         />
         <ChatWindow socket={this.socket} />
       </div>
     )
   }
 
-  handleQuizReset = () => {
-    this.setState({ shouldWaitForReset: false })
+  handleProcessForAuth = () => {
+    this.setState({ didAuth: false, shouldWaitForReset: false })
   }
 }
 

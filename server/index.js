@@ -187,6 +187,9 @@ io.on('connection', socket => {
     db.setSid(uid, socket.id)
     log('auth')
 
+    if (db.getRoomMasterUid(roomid) === uid)
+      db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
+
     const sendChatMsg = (tag, body = '') => {
       body = body || ''
       io.to(roomid).emit('chat-msg', {
