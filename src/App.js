@@ -552,9 +552,6 @@ class SceneView extends Component {
       case S.WAIT_RESET:
         content = <WaitReset />
         break
-
-      default:
-        throw new Error('An unexpected error occurred.')
     }
 
     return (
