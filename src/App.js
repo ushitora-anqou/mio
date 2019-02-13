@@ -117,7 +117,7 @@ class ChatHistory extends Component {
             {msg.tag === 'join' && (
               <div className='ChatHistoryRowNotification'>
                 <span className='ChatHistoryRowName'>{msg.name}</span>
-                <span className='ChatHistoryRowBody'>join</span>
+                <span className='ChatHistoryRowBody'>joined</span>
               </div>
             )}
             {msg.tag === 'leave' && (
@@ -218,19 +218,31 @@ class PlayMusic extends Component {
     super(props)
 
     this.state = {
-      playing: false
+      playing: false,
+      music_buf: null
     }
-    this.music = { buf: props.music }
+    this.audioCtx = new AudioContext()
+    this.audioCtx.decodeAudioData(props.music, buf => {
+      this.setState({ music_buf: buf })
+    })
   }
 
   onClickStart = () => {
-    this.setState({ playing: true })
-    this.audioCtx = new AudioContext()
-    this.props.onClickStart(this.audioCtx.currentTime)
+    if (this.state.music_buf) {
+      this.setState({ playing: true })
+      this.props.onClickStart(this.audioCtx.currentTime)
+
+      // play the music
+      this.source = this.audioCtx.createBufferSource()
+      this.source.buffer = this.state.music_buf
+      this.source.connect(this.audioCtx.destination)
+      this.source.start(0)
+    }
   }
 
   onClickStop = () => {
     this.props.onClickStop(this.audioCtx.currentTime)
+    this.source.stop()
   }
 
   render () {
@@ -239,7 +251,12 @@ class PlayMusic extends Component {
         {this.state.playing ? (
           <button onClick={this.onClickStop}>Stop</button>
         ) : (
-          <button onClick={this.onClickStart}>Start</button>
+          <button
+            onClick={this.onClickStart}
+            disabled={this.state.music_buf ? false : true}
+          >
+            Start
+          </button>
         )}
       </div>
     )
