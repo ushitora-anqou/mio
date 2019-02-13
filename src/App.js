@@ -167,7 +167,7 @@ class WaitMusic extends Component {
       <div className='WaitMusic'>
         {this.props.master && (
           <form onSubmit={this.handleSubmit}>
-            <input type='file' ref={this.inputMusicFile} />
+            <input type='file' accept='audio/*' ref={this.inputMusicFile} />
             <button type='submit'>Send</button>
           </form>
         )}
