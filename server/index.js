@@ -3,10 +3,11 @@ const fs = require('fs')
 const http = require('http')
 const socketio = require('socket.io')
 const Redis = require('ioredis')
+const config = require('./config')
 
-const port = 4000
+console.log(config)
+
 const testing = process.env.MIO_TEST ? true : false
-const redisUrl = process.env.REDIS_URL || '127.0.0.1:6379'
 
 function console_log (str) {
   testing || console.log(str)
@@ -168,7 +169,7 @@ class RedisDatabase extends NaiveDatabase {
 async function newRedisDatabase (testing = false) {
   const room_key = 'mio:room'
   const user_key = 'mio:user'
-  const redis = new Redis(redisUrl)
+  const redis = new Redis(config.redisUrl)
 
   const room_json = await redis.get(room_key)
   const user_json = await redis.get(user_key)
@@ -193,12 +194,9 @@ async function main () {
   //})
   const db = await newRedisDatabase()
   const server = http.createServer()
-  const io = socketio(server, {
-    serveClient: false,
-    maxHttpBufferSize: 500000
-  })
-  server.listen(port)
-  console_log('start listening at port ' + port)
+  const io = socketio(server, config.serverOptions)
+  server.listen(config.port)
+  console_log('start listening at port ' + config.port)
 
   // initialize db
   db.setAllRoomStage(STAGE.WAITING_QUIZ_MUSIC)
