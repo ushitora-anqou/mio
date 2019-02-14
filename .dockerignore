@@ -1,0 +1,7 @@
+.git
+node_modules
+user.json
+room.json
+note.md
+sandbox
+.env
