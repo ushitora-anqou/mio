@@ -5,12 +5,8 @@ const socketio = require('socket.io')
 const Redis = require('ioredis')
 const config = require('./config')
 
-console.log(config)
-
-const testing = process.env.MIO_TEST ? true : false
-
 function console_log (str) {
-  testing || console.log(str)
+  config.noprint || console.log(str)
 }
 
 function fileExists (path) {
@@ -187,8 +183,10 @@ async function newRedisDatabase (testing = false) {
 }
 
 async function main () {
+  console_log(`config: ${JSON.stringify(config)}`)
+
   //const db = new JSONDatabase({
-  //  testing,
+  //  testing: false,
   //  room_json: 'room.json',
   //  user_json: 'user.json'
   //})
