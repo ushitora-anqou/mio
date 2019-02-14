@@ -1,7 +1,5 @@
 const uuid = require('uuid/v4')
 const fs = require('fs')
-const http = require('http')
-const socketio = require('socket.io')
 const Redis = require('ioredis')
 const config = require('./config')
 
@@ -191,10 +189,7 @@ async function main () {
   //  user_json: 'user.json'
   //})
   const db = await newRedisDatabase()
-  const server = http.createServer()
-  const io = socketio(server, config.serverOptions)
-  server.listen(config.port)
-  console_log('start listening at port ' + config.port)
+  const io = config.createSocketIOServer()
 
   // initialize db
   db.setAllRoomStage(STAGE.WAITING_QUIZ_MUSIC)

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "express": "^4.16.4",
     "immutability-helper": "^3.0.0",
     "ioredis": "^4.6.2",
     "lamejs": "^1.2.0",
