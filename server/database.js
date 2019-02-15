@@ -1,3 +1,174 @@
+const uuid = require('uuid/v4')
+const fs = require('fs')
+const Redis = require('ioredis')
+
+function fileExists (path) {
+  try {
+    fs.statSync(path)
+    return true
+  } catch (err) {
+    return false
+  }
+}
+
+class NaiveDatabase {
+  constructor (room, user) {
+    this.room = room
+    this.user = user
+    this.uid2sid = {}
+  }
+
+  createUser (roomid, name) {
+    const uid = 'U' + uuid()
+    const password = 'P' + uuid()
+    const created_at = Date.now()
+    this.user[uid] = { name, password, roomid, created_at }
+    return { uid, password }
+  }
+
+  createRoom (masterName, initialStage) {
+    const roomid = 'R' + uuid()
+    const { uid, password } = this.createUser(roomid, masterName)
+    const created_at = Date.now()
+    const stage = initialStage
+    this.room[roomid] = { master: uid, created_at, stage }
+    return { uid, password, roomid }
+  }
+
+  checkRoomStage (roomid, stage) {
+    const room = this.room[roomid]
+    if (!room) return false
+    return room.stage === stage
+  }
+
+  updateRoomStage (roomid, stage) {
+    this.room[roomid].stage = stage
+  }
+
+  roomExists (roomid) {
+    return this.room.hasOwnProperty(roomid)
+  }
+
+  userExists (uid, password, roomid) {
+    return (
+      this.user.hasOwnProperty(uid) &&
+      this.user[uid].password === password &&
+      this.user[uid].roomid === roomid
+    )
+  }
+
+  // REMARK: Any user will be removed only by deleting the room
+  // that the user is in.
+  deleteRoom (roomid) {
+    delete this.room[roomid]
+    Object.keys(this.user).forEach(uid => {
+      if (this.user[uid].roomid === roomid) delete this.user[uid]
+    })
+  }
+
+  isAnyoneIn (roomid) {
+    return Object.keys(this.user).some(
+      uid =>
+        this.user[uid].roomid === roomid && this.uid2sid.hasOwnProperty(uid)
+    )
+  }
+
+  getRoomMasterUid (roomid) {
+    return this.room[roomid].master
+  }
+
+  setSid (uid, sid) {
+    this.uid2sid[uid] = sid
+  }
+
+  getSid (uid) {
+    return this.uid2sid[uid]
+  }
+
+  deleteSidOf (uid) {
+    delete this.uid2sid[uid]
+  }
+
+  getNameOf (uid) {
+    return this.user[uid].name
+  }
+
+  setAllRoomStage (stage) {
+    Object.keys(this.room).forEach(roomid => {
+      this.room[roomid].stage = stage
+    })
+  }
+}
+
+class JSONDatabase extends NaiveDatabase {
+  constructor (options) {
+    const room =
+      fileExists(options.room_json) && !options.testing
+        ? JSON.parse(fs.readFileSync(options.room_json))
+        : {}
+    const user =
+      fileExists(options.user_json) && !options.testing
+        ? JSON.parse(fs.readFileSync(options.user_json))
+        : {}
+    super(room, user)
+
+    this.testing = options.testing
+    this.room_json = options.room_json
+    this.user_json = options.user_json
+
+    this.shutdownGracefully = this.shutdownGracefully.bind(this)
+    process.on('SIGTERM', this.shutdownGracefully)
+    process.on('SIGINT', this.shutdownGracefully)
+  }
+
+  shutdownGracefully () {
+    if (!this.testing) {
+      fs.writeFileSync(this.room_json, JSON.stringify(this.room))
+      fs.writeFileSync(this.user_json, JSON.stringify(this.user))
+    }
+    process.exit(0)
+  }
+}
+
+class RedisDatabase extends NaiveDatabase {
+  constructor (options) {
+    super(options.room, options.user)
+    this.options = options
+
+    this.shutdownGracefully = this.shutdownGracefully.bind(this)
+    process.on('SIGTERM', this.shutdownGracefully)
+    process.on('SIGINT', this.shutdownGracefully)
+  }
+
+  shutdownGracefully () {
+    if (!this.options.testing) {
+      this.options.redis.set(this.options.room_key, JSON.stringify(this.room))
+      this.options.redis.set(this.options.user_key, JSON.stringify(this.user))
+    }
+    process.exit(0)
+  }
+}
+
+async function newRedisDatabase (redisUrl, testing = false) {
+  const room_key = 'mio:room'
+  const user_key = 'mio:user'
+  const redis = new Redis(redisUrl)
+
+  const room_json = await redis.get(room_key)
+  const user_json = await redis.get(user_key)
+  const room = room_json ? JSON.parse(room_json) : {}
+  const user = user_json ? JSON.parse(user_json) : {}
+
+  return new RedisDatabase({
+    redis,
+    room,
+    user,
+    room_key,
+    user_key,
+    testing
+  })
+}
+
 async function newSequelizeDatabase (url, options) {
   const uuid = require('uuid/v4')
   const Sequelize = require('sequelize')
@@ -38,8 +209,7 @@ async function newSequelizeDatabase (url, options) {
     },
     stage: {
       type: Sequelize.INTEGER,
-      allowNull: false,
-      defaultValue: 0
+      allowNull: false
     }
   })
 
@@ -51,8 +221,8 @@ async function newSequelizeDatabase (url, options) {
       return { uid: user.id, password: user.password }
     }
 
-    async createRoom (masterName) {
-      const room = await Room.create()
+    async createRoom (masterName, initialStage) {
+      const room = await Room.create({ stage: initialStage })
       const master = await room.createUser({ name: masterName })
       await room.setMaster(master)
       return { uid: master.id, password: master.password, roomid: room.id }
@@ -129,7 +299,8 @@ async function newSequelizeDatabase (url, options) {
   return new SequelizeDatabase()
 }
 
-module.exports = newSequelizeDatabase
+//module.exports = newSequelizeDatabase
+module.exports = newRedisDatabase
 
 ///
 
@@ -148,7 +319,7 @@ async function test () {
     config.databaseOptions
   )
 
-  const { uid: masterUid, roomid } = await db.createRoom('master')
+  const { uid: masterUid, roomid } = await db.createRoom('master', 0)
   console.log(roomid)
   assert(await db.getNameOf(masterUid), 'master')
 
