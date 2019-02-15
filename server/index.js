@@ -205,20 +205,20 @@ async function main () {
       log('Error: ' + JSON.stringify(err))
     })
 
-    socket.on('create-room', (param, cb) => {
+    socket.on('create-room', (param, done) => {
       const { uid, password, roomid } = db.createRoom(param.masterName)
-      cb(uid, password, roomid)
+      done(uid, password, roomid)
     })
 
-    socket.on('issue-uid', (param, cb) => {
+    socket.on('issue-uid', (param, done) => {
       const roomid = param.roomid
       if (!db.roomExists(roomid)) {
         log('roomid ' + roomid + ' not found')
-        cb(null, null)
+        done(null, null)
         return
       }
       const { uid, password } = db.createUser(roomid, param.name)
-      cb(uid, password)
+      done(uid, password)
     })
 
     socket.emit('auth', {}, (uid, password, roomid) => {
@@ -249,13 +249,13 @@ async function main () {
         })
       }
 
-      socket.on('chat-msg', (msg, cb) => {
+      socket.on('chat-msg', (msg, done) => {
         //log('chat-msg: ' + msg)
         sendChatMsg(msg.tag, msg.body)
-        cb()
+        done()
       })
 
-      socket.on('quiz-music', (msg, cb) => {
+      socket.on('quiz-music', (msg, done) => {
         if (
           !(
             db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC) &&
@@ -271,10 +271,10 @@ async function main () {
         log('quiz-music: ' + msg.buf.length)
 
         socket.to(roomid).emit('quiz-music', msg)
-        cb()
+        done()
       })
 
-      socket.on('quiz-answer', (msg, cb) => {
+      socket.on('quiz-answer', (msg, done) => {
         const master = db.getSid(db.getRoomMasterUid(roomid))
 
         if (
@@ -296,10 +296,10 @@ async function main () {
           name: db.getNameOf(uid)
         })
 
-        cb()
+        done()
       })
 
-      socket.on('quiz-result', (msg, cb) => {
+      socket.on('quiz-result', (msg, done) => {
         if (!db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) {
           log('quiz-result failed')
           return
@@ -310,10 +310,10 @@ async function main () {
 
         socket.to(roomid).emit('quiz-result', msg)
 
-        cb()
+        done()
       })
 
-      socket.on('quiz-reset', (msg, cb) => {
+      socket.on('quiz-reset', (msg, done) => {
         if (!(db.getSid(db.getRoomMasterUid(roomid)) !== undefined)) {
           log('quiz-reset failed')
           return
@@ -325,7 +325,7 @@ async function main () {
 
         socket.to(roomid).emit('quiz-reset', msg)
 
-        cb()
+        done()
       })
 
       socket.on('disconnect', () => {

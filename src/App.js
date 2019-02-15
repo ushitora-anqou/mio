@@ -720,8 +720,8 @@ class QuizRoom extends Component {
     this.password = props.password
 
     this.socket = this.state.socket
-    this.socket.on('auth', (x, cb) => {
-      cb(this.uid, this.password, this.roomid)
+    this.socket.on('auth', (x, done) => {
+      done(this.uid, this.password, this.roomid)
     })
     this.socket.on('auth-result', ({ status, shouldWaitForReset }) => {
       this.setState({
