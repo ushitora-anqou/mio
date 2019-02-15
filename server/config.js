@@ -12,7 +12,9 @@ const dev = {
     server.listen(this.port)
     console.log('start listening at port ' + this.port)
     return io
-  }
+  },
+  databaseUrl: 'postgres://localhost:5432/testdb',
+  databaseOptions: {}
 }
 
 const test = {
@@ -32,7 +34,9 @@ const prod = {
       )
     const io = socketio(server, { maxHttpBufferSize: 500000 })
     return io
-  }
+  },
+  databaseUrl: process.env.DATABASE_URL,
+  databaseOptions: { native: true }
 }
 
 const config = process.env.MIO_TEST ? test : process.env.MIO_PROD ? prod : dev

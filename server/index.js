@@ -188,6 +188,7 @@ async function main () {
   //  room_json: 'room.json',
   //  user_json: 'user.json'
   //})
+  //await require('./database')(config.databaseUrl, config.databaseOptions)
   const db = await newRedisDatabase()
   const io = config.createSocketIOServer()
 
