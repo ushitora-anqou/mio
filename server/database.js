@@ -250,6 +250,17 @@ async function newSequelizeDatabase (url, options) {
       }
     }
 
+    async userExists (uid, password, roomid) {
+      try {
+        const user = await User.findOne({
+          where: { id: uid, password, roomId: roomid }
+        })
+        return !!user
+      } catch (err) {
+        return false
+      }
+    }
+
     // REMARK: Any user will be removed only by deleting the room
     // that the user is in.
     deleteRoom (roomid) {
@@ -289,8 +300,8 @@ async function newSequelizeDatabase (url, options) {
     }
   }
 
-  await User.sync({ force: true })
-  await Room.sync({ force: true })
+  await User.sync()
+  await Room.sync()
   Room.hasMany(User, { onDelete: 'CASCADE', hooks: true })
   const Master = Room.belongsTo(User, { as: 'master' })
   await User.sync({ force: false, alter: true })
@@ -299,8 +310,8 @@ async function newSequelizeDatabase (url, options) {
   return new SequelizeDatabase()
 }
 
-//module.exports = newSequelizeDatabase
-module.exports = newRedisDatabase
+module.exports = newSequelizeDatabase
+//module.exports = newRedisDatabase
 
 ///
 
@@ -319,9 +330,15 @@ async function test () {
     config.databaseOptions
   )
 
-  const { uid: masterUid, roomid } = await db.createRoom('master', 0)
+  const {
+    uid: masterUid,
+    roomid,
+    password: masterPassword
+  } = await db.createRoom('master', 0)
   console.log(roomid)
   assert(await db.getNameOf(masterUid), 'master')
+
+  assert(await db.userExists(masterUid, masterPassword, roomid), true)
 
   assert(await db.getRoomMasterUid(roomid), masterUid)
   await db.setSid(masterUid, 'hoge')
@@ -355,3 +372,5 @@ async function test () {
 
   console.log(chalk.yellow('done'))
 }
+
+//test()

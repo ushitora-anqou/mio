@@ -8,7 +8,7 @@
 ## prod in local
 
 - `yarn build`
-- `MIO_PROD=1 PORT=5000 REDIS_URL="127.0.0.1:6379" node server/index.js`
+- `MIO_PROD=1 PORT=5000 DATABASE_URL="postgres://localhost:5432/testdb" node server/index.js`
 
 ## docker
 
@@ -16,6 +16,8 @@
 - `docker run -p 5000:5000 --env-file .env -id --rm mio`
 
 ## heroku
+
+- `heroku run MIO_PROD=1 node server/index.js`
 
 - `heroku config:set REACT_APP_SERVER_URI=(server's uri)`
 - `heroku container:push web`

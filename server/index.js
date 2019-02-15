@@ -19,13 +19,16 @@ async function main () {
   //  room_json: 'room.json',
   //  user_json: 'user.json'
   //})
-  //await require('./database')(config.databaseUrl, config.databaseOptions)
+  const db = await require('./database')(
+    config.databaseUrl,
+    config.databaseOptions
+  )
   //const db = await newRedisDatabase()
-  const db = await require('./database')(config.redisUrl)
+  //const db = await require('./database')(config.redisUrl)
   const io = config.createSocketIOServer()
 
   // initialize db
-  db.setAllRoomStage(STAGE.WAITING_QUIZ_MUSIC)
+  await db.setAllRoomStage(STAGE.WAITING_QUIZ_MUSIC)
 
   io.on('connection', socket => {
     const log = msg => {
@@ -38,32 +41,32 @@ async function main () {
       log('Error: ' + JSON.stringify(err))
     })
 
-    socket.on('create-room', (param, done) => {
-      const { uid, password, roomid } = db.createRoom(
+    socket.on('create-room', async (param, done) => {
+      const { uid, password, roomid } = await db.createRoom(
         param.masterName,
         STAGE.WAITING_QUIZ_MUSIC
       )
       done(uid, password, roomid)
     })
 
-    socket.on('issue-uid', (param, done) => {
+    socket.on('issue-uid', async (param, done) => {
       const roomid = param.roomid
-      if (!db.roomExists(roomid)) {
+      if (!(await db.roomExists(roomid))) {
         log('roomid ' + roomid + ' not found')
         done(null, null)
         return
       }
-      const { uid, password } = db.createUser(roomid, param.name)
+      const { uid, password } = await db.createUser(roomid, param.name)
       done(uid, password)
     })
 
-    socket.emit('auth', {}, (uid, password, roomid) => {
+    socket.emit('auth', {}, async (uid, password, roomid) => {
       const log = msg => {
         console_log(`[${socket.id}][${uid} / ${roomid}] ${msg}`)
       }
 
       // check uid and password are correct
-      if (!db.userExists(uid, password, roomid)) {
+      if (!(await db.userExists(uid, password, roomid))) {
         log('auth failed ' + uid)
         socket.emit('auth-result', { status: 'ng' })
         return
@@ -71,15 +74,15 @@ async function main () {
       // if (!room.hasOwnProperty(roomid))  return false
 
       socket.join(roomid)
-      db.setSid(uid, socket.id)
+      await db.setSid(uid, socket.id)
       log('auth')
 
-      const sendChatMsg = (tag, body = '') => {
+      const sendChatMsg = async (tag, body = '') => {
         body = body || ''
         io.to(roomid).emit('chat-msg', {
           mid: uuid(),
           uid: uid,
-          name: db.getNameOf(uid),
+          name: await db.getNameOf(uid),
           body: body,
           tag: tag
         })
@@ -91,18 +94,18 @@ async function main () {
         done()
       })
 
-      socket.on('quiz-music', (msg, done) => {
+      socket.on('quiz-music', async (msg, done) => {
         if (
           !(
-            db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC) &&
-            db.getRoomMasterUid(roomid) === uid
+            (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)) &&
+            (await db.getRoomMasterUid(roomid)) === uid
           )
         ) {
           log('quiz-music failed')
           return
         }
 
-        db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)
+        await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)
 
         log('quiz-music: ' + msg.buf.length)
 
@@ -110,12 +113,12 @@ async function main () {
         done()
       })
 
-      socket.on('quiz-answer', (msg, done) => {
-        const master = db.getSid(db.getRoomMasterUid(roomid))
+      socket.on('quiz-answer', async (msg, done) => {
+        const master = await db.getSid(await db.getRoomMasterUid(roomid))
 
         if (
           !(
-            db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER) &&
+            (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) &&
             master !== undefined
           )
         ) {
@@ -129,33 +132,35 @@ async function main () {
           uid: uid,
           time: msg.time,
           answer: msg.answer,
-          name: db.getNameOf(uid)
+          name: await db.getNameOf(uid)
         })
 
         done()
       })
 
-      socket.on('quiz-result', (msg, done) => {
-        if (!db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) {
+      socket.on('quiz-result', async (msg, done) => {
+        if (!(await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER))) {
           log('quiz-result failed')
           return
         }
 
         log('quiz-result: ' + JSON.stringify(msg))
-        db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_RESET)
+        await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_RESET)
 
         socket.to(roomid).emit('quiz-result', msg)
 
         done()
       })
 
-      socket.on('quiz-reset', (msg, done) => {
-        if (!(db.getSid(db.getRoomMasterUid(roomid)) !== undefined)) {
+      socket.on('quiz-reset', async (msg, done) => {
+        if (
+          !((await db.getSid(await db.getRoomMasterUid(roomid))) !== undefined)
+        ) {
           log('quiz-reset failed')
           return
         }
 
-        db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
+        await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
 
         log('quiz-reset')
 
@@ -164,16 +169,16 @@ async function main () {
         done()
       })
 
-      socket.on('disconnect', () => {
+      socket.on('disconnect', async () => {
         log('Leave')
         sendChatMsg('leave')
 
-        db.deleteSidOf(uid)
+        await db.deleteSidOf(uid)
 
         // Delete the room if no one is connecting to it
-        if (!db.isAnyoneIn(roomid)) {
+        if (!(await db.isAnyoneIn(roomid))) {
           log('Delete room')
-          db.deleteRoom(roomid)
+          await db.deleteRoom(roomid)
         }
       })
 
@@ -181,7 +186,10 @@ async function main () {
 
       socket.emit('auth-result', {
         status: 'ok',
-        shouldWaitForReset: !db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
+        shouldWaitForReset: !(await db.checkRoomStage(
+          roomid,
+          STAGE.WAITING_QUIZ_MUSIC
+        ))
       })
 
       return

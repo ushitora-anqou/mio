@@ -36,7 +36,13 @@ const prod = {
     return io
   },
   databaseUrl: process.env.DATABASE_URL,
-  databaseOptions: { native: true }
+  databaseOptions: {
+    dialect: 'postgres',
+    protocol: 'postgres',
+    dialectOptions: {
+      ssl: true
+    }
+  }
 }
 
 const config = process.env.MIO_TEST ? test : process.env.MIO_PROD ? prod : dev
