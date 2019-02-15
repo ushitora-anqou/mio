@@ -7,9 +7,9 @@ const test = {
 }
 
 const prod = {
-  server_uri: process.env.MIO_SERVER_URI
+  server_uri: process.env.REACT_APP_SERVER_URI
 }
 
-const config = process.env.MIO_TEST ? test : process.env.MIO_PROD ? prod : dev
+const config = process.env.NODE_ENV === 'production' ? prod : dev
 
 export { config }

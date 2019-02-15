@@ -3,7 +3,7 @@ FROM node:11.9.0-alpine
 WORKDIR /opt/mio
 
 COPY . .
-RUN yarn install --pure-lockfile
+RUN NODE_ENV=production yarn install --pure-lockfile
 RUN yarn build
 
 RUN adduser -D myuser
