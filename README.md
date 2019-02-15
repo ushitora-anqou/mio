@@ -12,9 +12,11 @@
 
 ## docker
 
-- `sudo docker build --build-arg REACT_APP_SERVER_URI=localhost:5000 -t mio .`
-- `sudo docker run -p 5000:5000 --env-file .env -id --rm mio`
+- `docker build --build-arg REACT_APP_SERVER_URI=localhost:5000 -t mio .`
+- `docker run -p 5000:5000 --env-file .env -id --rm mio`
 
 ## heroku
 
 - `heroku config:set REACT_APP_SERVER_URI=(server's uri)`
+- `heroku container:push web`
+- `heroku container:release web`
