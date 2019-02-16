@@ -77,6 +77,18 @@ async function main () {
       await db.setSid(uid, socket.id)
       log('auth')
 
+      // If the master refresh the page, reset the game.
+      // TODO: stable page refreshing
+      if (
+        (await db.getRoomMasterUid(roomid)) === uid &&
+        !(await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC))
+      ) {
+        await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
+        const message =
+          "Sorry! The master's connection to the server was lost, so the game has been reset."
+        socket.to(roomid).emit('quiz-reset', { message })
+      }
+
       const sendChatMsg = async (tag, body = '') => {
         body = body || ''
         io.to(roomid).emit('chat-msg', {

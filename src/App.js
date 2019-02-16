@@ -593,7 +593,7 @@ class SceneView extends Component {
       } else if (!this._checkScene(this.SCENE.WAIT_MUSIC)) {
         this._changeScene(this.SCENE.WAIT_MUSIC)
         const message =
-          "Sorry! The master's connection to the server was lost, so the game has been reset."
+          'Sorry! The connection to the server was lost, so the game has been reset.'
         this.setState({ message })
       }
 
