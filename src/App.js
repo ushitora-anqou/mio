@@ -335,13 +335,16 @@ class InputAnswer extends Component {
   constructor (props) {
     super(props)
 
+    this.state = { sending: false }
+
     this.inputAnswer = React.createRef()
   }
 
   handleSubmit = e => {
     e.preventDefault()
-    if (isPrintable(this.inputAnswer.current.value))
-      this.props.onSubmit(this.inputAnswer.current.value)
+    if (!isPrintable(this.inputAnswer.current.value)) return
+    this.props.onSubmit(this.inputAnswer.current.value)
+    this.setState({ sending: true })
   }
 
   render () {
@@ -352,7 +355,9 @@ class InputAnswer extends Component {
             Answer:
             <input type='text' ref={this.inputAnswer} />
           </label>
-          <button type='submit'>Send</button>
+          <button type='submit' disabled={this.state.sending}>
+            Send
+          </button>
         </form>
       </div>
     )
@@ -883,7 +888,8 @@ class CreateRoom extends Component {
 
     this.state = {
       socket: newSocket(),
-      redirect: false
+      redirect: false,
+      sending: false
     }
 
     this.inputName = React.createRef()
@@ -894,6 +900,8 @@ class CreateRoom extends Component {
     e.preventDefault()
 
     if (!isPrintable(this.inputName.current.value)) return
+
+    this.setState({ sending: true })
 
     this.socket.emit(
       'create-room',
@@ -925,7 +933,9 @@ class CreateRoom extends Component {
             Name
             <input type='text' ref={this.inputName} />
           </label>
-          <button type='submit'>Submit</button>
+          <button type='submit' disabled={this.state.sending}>
+            Submit
+          </button>
         </form>
       </div>
     )
