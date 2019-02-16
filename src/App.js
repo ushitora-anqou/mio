@@ -198,7 +198,7 @@ class WaitMusic extends Component {
       if (this.inputMusicFile.current.files.length !== 1)
         throw new Error('The number of specified files should be one.')
       const file = this.inputMusicFile.current.files[0]
-      if (file.size > 10000000) throw new Error('The file is too big.')
+      if (file.size > 20000000) throw new Error('The file is too big.')
       musicBuf = await extractHeadOfMusic(
         await readFileAsync(file),
         15,
@@ -212,9 +212,9 @@ class WaitMusic extends Component {
         )
     } catch (err) {
       this.props.onFailToLoad(err)
+      this.setState({ sending: false })
     }
 
-    this.setState({ sending: false })
     if (musicBuf) this.props.onSendMusic(musicBuf)
   }
 
