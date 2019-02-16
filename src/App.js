@@ -807,13 +807,12 @@ class QuizRoom extends Component {
 
   render () {
     if (this.state.established === false) {
-      return <Route component={NoMatch} />
+      return <Route component={RoomNotFound} />
     }
 
     return (
       <SocketContext.Provider value={{ established: this.state.established }}>
         <div className='QuizRoom'>
-          <h1>Hello holo</h1>
           <ConnectionStatus />
           <SceneView
             master={this.master}
@@ -850,6 +849,7 @@ class ConnectionStatus extends Component {
 const App = () => (
   <Router>
     <div className='App'>
+      <h1>Mio - Intro Quiz App</h1>
       <Switch>
         <Route exact path='/' component={Home} />
         <Route exact path='/create-room' component={CreateRoom} />
@@ -862,7 +862,6 @@ const App = () => (
 
 const Home = () => (
   <div>
-    <h1>Hello holo</h1>
     <Link to='/create-room'>Create a room to play</Link>
   </div>
 )
@@ -872,6 +871,21 @@ const NoMatch = ({ location }) => (
     <h1>404 Not Found</h1>
     <p>
       <code>{location.pathname}</code> not found
+    </p>
+  </div>
+)
+
+const RoomNotFound = ({ location }) => (
+  <div>
+    <h2>お探しの部屋は見つかりませんでした</h2>
+    <p>
+      この部屋は削除されたか、もともと存在しませんでした。
+      中に居る人が全員居なくなると部屋は自動的に削除されます。許して。
+    </p>
+    <p>
+      <Link to='/create-room'>
+        ここから部屋を作って新しいゲームを始めて下しあ。
+      </Link>
     </p>
   </div>
 )
@@ -949,7 +963,7 @@ class IssueAccount extends Component {
         )
 
       default:
-        return <Route component={NoMatch} />
+        return <Route component={RoomNotFound} />
     }
   }
 }
