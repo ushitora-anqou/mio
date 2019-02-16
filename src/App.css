@@ -3,14 +3,6 @@
   margin: 1% auto;
 }
 
-.ShowResultEntries .CorrectRow {
-  background-color: palegreen;
-}
-
-.ShowResultEntries .WrongRow {
-  background-color: pink;
-}
-
 .SceneView {
   width: 500px;
   display: block;
@@ -19,6 +11,62 @@
 
 .WaitMusic > div {
   margin: 20px;
+}
+
+.PlayMusic > button {
+  width: 70%;
+  height: 100px;
+}
+
+.ShowResultEntries {
+  display: table;
+  border: 1px solid #ccc;
+}
+
+.ShowResultEntries .CorrectRow {
+  background-color: palegreen;
+}
+
+.ShowResultEntries .WrongRow {
+  background-color: pink;
+}
+
+.ShowResultEntriesColumn {
+  display: table-cell;
+  border: 1px solid #ccc;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.ShowResultEntriesColumnName {
+  width: 100px;
+  padding: 10px;
+}
+
+.ShowResultEntriesColumnTime {
+  width: 50px;
+  padding: 10px;
+}
+
+.ShowResultEntriesColumnAnswer {
+  width: 250px;
+  padding: 10px;
+}
+
+.ShowResultEntriesColumnCheck {
+  width: 20px;
+}
+
+.SelectCorrectAnswer button {
+  margin: 10px;
+  width: 100px;
+  float: right;
+}
+
+.ShowResult button {
+  margin: 10px;
+  width: 100px;
+  float: right;
 }
 
 .ChatWindow {

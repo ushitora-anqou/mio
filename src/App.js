@@ -264,7 +264,7 @@ class WaitMusic extends Component {
               type='text'
               value={window.location.href}
               ref={this.urlRef}
-              readonly
+              readonly={true}
             />
           </label>
           <button
@@ -363,13 +363,13 @@ class PlayMusic extends Component {
     return (
       <div className='PlayMusic'>
         {this.state.playing ? (
-          <button onClick={this.onClickStop}>Stop</button>
+          <button onClick={this.onClickStop}>停止</button>
         ) : (
           <button
             onClick={this.onClickStart}
             disabled={this.state.music_buf ? false : true}
           >
-            Start
+            再生
           </button>
         )}
       </div>
@@ -400,14 +400,14 @@ class InputAnswer extends Component {
       <div className='InputAnswer'>
         <form onSubmit={this.handleSubmit}>
           <label>
-            Answer:
+            答え：
             <input type='text' ref={this.inputAnswer} />
           </label>
           <button
             type='submit'
             disabled={this.state.sending || !this.context.established}
           >
-            Send
+            送信
           </button>
         </form>
       </div>
@@ -439,10 +439,11 @@ class SelectCorrectAnswer extends Component {
 
     return (
       <div className='SelectCorrectAnswer'>
+        <h2>採点</h2>
         {isEmpty(answers) ? (
           <div>
-            <p>Waiting for the answers</p>
-            <button onClick={this.props.onReset}>Reset</button>
+            <p>回答を待っています……</p>
+            <button onClick={this.props.onReset}>次のゲームへ</button>
           </div>
         ) : (
           <div>
@@ -457,7 +458,7 @@ class SelectCorrectAnswer extends Component {
                 onClick={this.props.onSendResult}
                 disabled={this.state.sending || !this.context.established}
               >
-                Send
+                採点終了
               </button>
             )}
           </div>
@@ -474,26 +475,32 @@ function ShowResultEntries (props) {
   )
 
   return (
-    <table className='ShowResultEntries'>
-      <tbody>
-        {uids.map(uid => {
-          const entry = entries[uid]
-          return (
-            <tr
-              key={entry.uid}
-              className={
-                entry.judge === undefined
-                  ? ''
-                  : entry.judge
-                  ? 'CorrectRow'
-                  : 'WrongRow'
-              }
-            >
-              <td>{entry.name}</td>
-              <td>{entry.time.toFixed(4)}</td>
-              <td>{entry.answer}</td>
-              {props.judging && (
-                <td>
+    <div className='ShowResultEntries'>
+      {uids.map(uid => {
+        const entry = entries[uid]
+        return (
+          <div
+            key={entry.uid}
+            className={
+              entry.judge === undefined
+                ? ''
+                : entry.judge
+                ? 'CorrectRow'
+                : 'WrongRow'
+            }
+          >
+            <div className='ShowResultEntriesColumn ShowResultEntriesColumnName'>
+              {entry.name}
+            </div>
+            <div className='ShowResultEntriesColumn ShowResultEntriesColumnTime'>
+              {entry.time.toFixed(4)}
+            </div>
+            <div className='ShowResultEntriesColumn ShowResultEntriesColumnAnswer'>
+              {entry.answer}
+            </div>
+            {props.judging && (
+              <div className='ShowResultEntriesColumn'>
+                <div className='ShowResultEntriesColumnCheck'>
                   <label>
                     <input
                       type='radio'
@@ -520,13 +527,13 @@ function ShowResultEntries (props) {
                       ❌
                     </span>
                   </label>
-                </td>
-              )}
-            </tr>
-          )
-        })}
-      </tbody>
-    </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -547,8 +554,9 @@ class ShowResult extends Component {
   render () {
     return (
       <div className='ShowResult'>
+        <h2>採点結果</h2>
         {isEmpty(this.props.answers) ? (
-          <p>Waiting for the result</p>
+          <p>採点が終了するのを待っています……</p>
         ) : (
           <div>
             <ShowResultEntries entries={this.props.answers} judging={false} />
@@ -557,7 +565,7 @@ class ShowResult extends Component {
                 onClick={this.props.onReset}
                 disabled={this.state.sending || !this.context.established}
               >
-                Reset
+                次のゲームへ
               </button>
             )}{' '}
           </div>
