@@ -73,6 +73,8 @@ function newSocket () {
   return io(config.server_uri)
 }
 
+const SocketContext = React.createContext()
+
 class ChatWindow extends Component {
   constructor (props) {
     super(props)
@@ -181,6 +183,8 @@ function ChatPostForm (props) {
 }
 
 class WaitMusic extends Component {
+  static contextType = SocketContext
+
   constructor (props) {
     super(props)
 
@@ -233,7 +237,10 @@ class WaitMusic extends Component {
         {this.props.master && (
           <form onSubmit={this.handleSubmit}>
             <input type='file' accept='audio/*' ref={this.inputMusicFile} />
-            <button type='submit' disabled={this.state.sending}>
+            <button
+              type='submit'
+              disabled={this.state.sending || !this.context.established}
+            >
               Send
             </button>
           </form>
@@ -341,6 +348,8 @@ class PlayMusic extends Component {
 }
 
 class InputAnswer extends Component {
+  static contextType = SocketContext
+
   constructor (props) {
     super(props)
 
@@ -364,7 +373,10 @@ class InputAnswer extends Component {
             Answer:
             <input type='text' ref={this.inputAnswer} />
           </label>
-          <button type='submit' disabled={this.state.sending}>
+          <button
+            type='submit'
+            disabled={this.state.sending || !this.context.established}
+          >
             Send
           </button>
         </form>
@@ -373,51 +385,56 @@ class InputAnswer extends Component {
   }
 }
 
-function SelectCorrectAnswer (props) {
-  const answers = props.answers
-  const canSendResult = () => {
-    return Object.keys(answers).every(uid =>
-      answers[uid].hasOwnProperty('judge')
-    )
+class SelectCorrectAnswer extends Component {
+  static contextType = SocketContext
+
+  constructor (props) {
+    super(props)
+
+    this.state = { sending: false }
   }
 
-  return (
-    <div className='SelectCorrectAnswer'>
-      {isEmpty(answers) ? (
-        <div>
-          <p>Waiting for the answers</p>
-          <button onClick={props.onReset}>Reset</button>
-        </div>
-      ) : (
-        <div>
-          <ShowResultEntries
-            entries={answers}
-            onClickOk={props.onCheckOk}
-            onClickNg={props.onCheckNg}
-            judging={true}
-          />
-          {canSendResult() && (
-            <button onClick={props.onSendResult}>Send</button>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
+  handleSend = () => {
+    this.setState({ sending: true })
+    this.props.onSendResult()
+  }
 
-function ShowResult (props) {
-  return (
-    <div className='ShowResult'>
-      {isEmpty(props.answers) ? (
-        <p>Waiting for the result</p>
-      ) : (
-        <div>
-          <ShowResultEntries entries={props.answers} judging={false} />
-          {props.master && <button onClick={props.onReset}>Reset</button>}{' '}
-        </div>
-      )}
-    </div>
-  )
+  render () {
+    const answers = this.props.answers
+    const canSendResult = () => {
+      return Object.keys(answers).every(uid =>
+        answers[uid].hasOwnProperty('judge')
+      )
+    }
+
+    return (
+      <div className='SelectCorrectAnswer'>
+        {isEmpty(answers) ? (
+          <div>
+            <p>Waiting for the answers</p>
+            <button onClick={this.props.onReset}>Reset</button>
+          </div>
+        ) : (
+          <div>
+            <ShowResultEntries
+              entries={answers}
+              onClickOk={this.props.onCheckOk}
+              onClickNg={this.props.onCheckNg}
+              judging={true}
+            />
+            {canSendResult() && (
+              <button
+                onClick={this.props.onSendResult}
+                disabled={this.state.sending || !this.context.established}
+              >
+                Send
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
 }
 
 function ShowResultEntries (props) {
@@ -481,6 +498,43 @@ function ShowResultEntries (props) {
       </tbody>
     </table>
   )
+}
+
+class ShowResult extends Component {
+  static contextType = SocketContext
+
+  constructor (props) {
+    super(props)
+
+    this.state = { sending: false }
+  }
+
+  handleReset = () => {
+    this.setState({ sending: true })
+    this.props.onReset()
+  }
+
+  render () {
+    return (
+      <div className='ShowResult'>
+        {isEmpty(this.props.answers) ? (
+          <p>Waiting for the result</p>
+        ) : (
+          <div>
+            <ShowResultEntries entries={this.props.answers} judging={false} />
+            {this.props.master && (
+              <button
+                onClick={this.props.onReset}
+                disabled={this.state.sending || !this.context.established}
+              >
+                Reset
+              </button>
+            )}{' '}
+          </div>
+        )}
+      </div>
+    )
+  }
 }
 
 function WaitReset (props) {
@@ -755,19 +809,21 @@ class QuizRoom extends Component {
     }
 
     return (
-      <div className='QuizRoom'>
-        <h1>Hello holo</h1>
-        <ConnectionStatus established={this.state.established} />
-        <SceneView
-          master={this.master}
-          socket={this.socket}
-          roomid={this.roomid}
-          didAuth={this.state.didAuth}
-          waitForReset={this.state.shouldWaitForReset}
-          onProcessForAuth={this.handleProcessForAuth}
-        />
-        <ChatWindow socket={this.socket} />
-      </div>
+      <SocketContext.Provider value={{ established: this.state.established }}>
+        <div className='QuizRoom'>
+          <h1>Hello holo</h1>
+          <ConnectionStatus />
+          <SceneView
+            master={this.master}
+            socket={this.socket}
+            roomid={this.roomid}
+            didAuth={this.state.didAuth}
+            waitForReset={this.state.shouldWaitForReset}
+            onProcessForAuth={this.handleProcessForAuth}
+          />
+          <ChatWindow socket={this.socket} />
+        </div>
+      </SocketContext.Provider>
     )
   }
 
@@ -776,14 +832,17 @@ class QuizRoom extends Component {
   }
 }
 
-function ConnectionStatus (props) {
-  return (
-    <div className='ConnectionStatus'>
-      {props.established === null && (
-        <p>Connecting to the server. Please hang tight...</p>
-      )}
-    </div>
-  )
+class ConnectionStatus extends Component {
+  static contextType = SocketContext
+  render () {
+    return (
+      <div className='ConnectionStatus'>
+        {this.context.established === null && (
+          <p>Connecting to the server. Please hang tight...</p>
+        )}
+      </div>
+    )
+  }
 }
 
 const App = () => (

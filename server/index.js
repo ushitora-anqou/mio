@@ -70,7 +70,7 @@ async function main () {
 
       // check uid and password are correct
       if (!(await db.userExists(uid, password, roomid))) {
-        log('auth failed ' + uid)
+        log('auth failed')
         socket.emit('auth-result', { status: 'ng' })
         return
       }
