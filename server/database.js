@@ -197,6 +197,10 @@ async function newSequelizeDatabase (url, options) {
     name: {
       type: Sequelize.STRING,
       allowNull: false
+    },
+    handshake: {
+      type: Sequelize.TEXT,
+      allowNull: false
     }
   })
 
@@ -215,15 +219,18 @@ async function newSequelizeDatabase (url, options) {
 
   // TODO: Assume that an only one server (and only one thread) writes to the database.
   class SequelizeDatabase {
-    async createUser (roomid, name) {
+    async createUser (roomid, name, handshake) {
       const room = await Room.findOne({ where: { id: roomid } })
-      const user = await room.createUser({ name })
+      const user = await room.createUser({ name, handshake })
       return { uid: user.id, password: user.password }
     }
 
-    async createRoom (masterName, initialStage) {
+    async createRoom (masterSrc, initialStage) {
       const room = await Room.create({ stage: initialStage })
-      const master = await room.createUser({ name: masterName })
+      const master = await room.createUser({
+        name: masterSrc.name,
+        handshake: masterSrc.handshake
+      })
       await room.setMaster(master)
       return { uid: master.id, password: master.password, roomid: room.id }
     }

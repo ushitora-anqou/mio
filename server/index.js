@@ -33,6 +33,7 @@ async function main () {
   await db.setAllUsersSocketId(null)
 
   io.on('connection', socket => {
+    const handshake = JSON.stringify(socket.handshake)
     const log = msg => {
       console_log('[' + socket.id + '] ' + msg)
     }
@@ -45,7 +46,7 @@ async function main () {
 
     socket.on('create-room', async (param, done) => {
       const { uid, password, roomid } = await db.createRoom(
-        param.masterName,
+        { name: param.masterName, handshake },
         STAGE.WAITING_QUIZ_MUSIC
       )
       log(`Create a room: ${roomid}`)
@@ -59,7 +60,11 @@ async function main () {
         done(null, null)
         return
       }
-      const { uid, password } = await db.createUser(roomid, param.name)
+      const { uid, password } = await db.createUser(
+        roomid,
+        param.name,
+        handshake
+      )
       log(`Issue an uid: ${uid}`)
       done(uid, password)
     })
