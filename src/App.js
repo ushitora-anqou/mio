@@ -839,6 +839,8 @@ class IssueAccount extends Component {
             stage: this.STAGE.REDIRECT,
             state: { uid, password, master: false }
           })
+        this.socket.close()
+        delete this.socket
       }
     )
     this.setState({ stage: this.STAGE.CONNECTING })
@@ -887,13 +889,12 @@ class CreateRoom extends Component {
     super(props)
 
     this.state = {
-      socket: newSocket(),
       redirect: false,
       sending: false
     }
 
     this.inputName = React.createRef()
-    this.socket = this.state.socket
+    this.socket = newSocket()
   }
 
   onSubmit = e => {
@@ -911,6 +912,8 @@ class CreateRoom extends Component {
         this.password = password
         this.roomid = roomid
         this.setState({ redirect: true })
+        this.socket.close()
+        delete this.socket
       }
     )
   }
