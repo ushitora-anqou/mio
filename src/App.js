@@ -149,20 +149,20 @@ class ChatHistory extends Component {
           <div className='ChatHistoryRow' key={msg.mid}>
             {msg.tag === 'message' && (
               <div>
-                <span className='ChatHistoryRowName'>{msg.name}</span>
-                <span className='ChatHistoryRowBody'>{msg.body}</span>
+                <div className='ChatHistoryRowName'>{msg.name}</div>
+                <div className='ChatHistoryRowBody'>{msg.body}</div>
               </div>
             )}
             {msg.tag === 'join' && (
               <div className='ChatHistoryRowNotification'>
-                <span className='ChatHistoryRowName'>{msg.name}</span>
-                <span className='ChatHistoryRowBody'>joined</span>
+                <div className='ChatHistoryRowName'>{msg.name}</div>
+                <div className='ChatHistoryRowBody'>joined</div>
               </div>
             )}
             {msg.tag === 'leave' && (
               <div className='ChatHistoryRowNotification'>
-                <span className='ChatHistoryRowName'>{msg.name}</span>
-                <span className='ChatHistoryRowBody'>left</span>
+                <div className='ChatHistoryRowName'>{msg.name}</div>
+                <div className='ChatHistoryRowBody'>left</div>
               </div>
             )}
           </div>
@@ -175,10 +175,12 @@ class ChatHistory extends Component {
 
 function ChatPostForm (props) {
   return (
-    <form onSubmit={props.handleSubmit}>
-      <input type='text' ref={props.inputMsg} />
-      <button type='submit'>Send</button>
-    </form>
+    <div className='ChatPostForm'>
+      <form onSubmit={props.handleSubmit}>
+        <input type='text' ref={props.inputMsg} />
+        <button type='submit'>Send</button>
+      </form>
+    </div>
   )
 }
 
