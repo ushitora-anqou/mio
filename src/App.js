@@ -215,7 +215,16 @@ class WaitMusic extends Component {
       this.setState({ sending: false })
     }
 
-    if (musicBuf) this.props.onSendMusic(musicBuf)
+    if (musicBuf) {
+      this.props.onSendMusic(musicBuf)
+      this.timerID = setTimeout(() => {
+        this.setState({ sending: false })
+      }, 2000)
+    }
+  }
+
+  componentWillUnmount () {
+    if (this.timerID) clearInterval(this.timerID)
   }
 
   render () {
