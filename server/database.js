@@ -267,6 +267,13 @@ async function newSequelizeDatabase (url, options) {
       return Room.destroy({ where: { id: roomid } })
     }
 
+    async isIn (uid, roomid) {
+      const user = await User.findOne({
+        where: { id: uid, roomId: roomid, socketId: { [Op.ne]: null } }
+      })
+      return !!user
+    }
+
     async isAnyoneIn (roomid) {
       const users = await User.findOne({
         where: { roomId: roomid, socketId: { [Op.ne]: null } }
@@ -282,7 +289,7 @@ async function newSequelizeDatabase (url, options) {
       return User.update({ socketId: sid }, { where: { id: uid } })
     }
 
-    async getSid (uid, sid) {
+    async getSid (uid) {
       return (await User.findOne({ where: { id: uid } })).socketId
     }
 
@@ -297,6 +304,10 @@ async function newSequelizeDatabase (url, options) {
 
     async setAllRoomStage (stage) {
       return Room.update({ stage }, { where: {} })
+    }
+
+    async setAllUsersSocketId (socketId) {
+      return User.update({ socketId }, { where: {} })
     }
   }
 

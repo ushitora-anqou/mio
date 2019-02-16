@@ -30,6 +30,7 @@ async function main () {
 
   // initialize db
   await db.setAllRoomStage(STAGE.WAITING_QUIZ_MUSIC)
+  await db.setAllUsersSocketId(null)
 
   io.on('connection', socket => {
     const log = msg => {
@@ -68,13 +69,17 @@ async function main () {
         console_log(`[${socket.id}][${uid} / ${roomid}] ${msg}`)
       }
 
-      // check uid and password are correct
-      if (!(await db.userExists(uid, password, roomid))) {
+      // check if auth is correct
+      if (
+        !(
+          (await db.userExists(uid, password, roomid)) &&
+          !(await db.isIn(uid, roomid))
+        )
+      ) {
         log('auth failed')
         socket.emit('auth-result', { status: 'ng' })
         return
       }
-      // if (!room.hasOwnProperty(roomid))  return false
 
       socket.join(roomid)
       await db.setSid(uid, socket.id)
