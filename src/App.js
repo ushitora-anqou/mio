@@ -264,7 +264,7 @@ class WaitMusic extends Component {
               type='text'
               value={window.location.href}
               ref={this.urlRef}
-              readonly={true}
+              readOnly
             />
           </label>
           <button
@@ -578,7 +578,7 @@ class ShowResult extends Component {
 function WaitReset (props) {
   return (
     <div className='WaitReset'>
-      <p>Waiting for the current ongoing game to finish... </p>
+      <p>いま行われているゲームが終わるのを待っています……</p>
     </div>
   )
 }
@@ -694,7 +694,7 @@ class SceneView extends Component {
       } else if (!this._checkScene(this.SCENE.WAIT_MUSIC)) {
         this._changeScene(this.SCENE.WAIT_MUSIC)
         const message =
-          'Sorry! The connection to the server was lost, so the game has been reset.'
+          'サーバへの通信が途絶えたため、行われていたゲームがリセットされました。ゆるして'
         this.setState({ message })
       }
 
@@ -761,11 +761,7 @@ class SceneView extends Component {
   }
 
   handleResetResult = () => {
-    this._emitAndChangeScene(
-      'quiz-reset',
-      { message: 'The game master reset the game.' },
-      this.SCENE.WAIT_MUSIC
-    )
+    this._emitAndChangeScene('quiz-reset', {}, this.SCENE.WAIT_MUSIC)
   }
 
   handleInputAnswer = (time, answer) => {
@@ -879,7 +875,7 @@ class ConnectionStatus extends Component {
     return (
       <div className='ConnectionStatus'>
         {this.context.established === null && (
-          <p>Connecting to the server. Please hang tight...</p>
+          <p>サーバへの接続が不安定です。しばらくお待ちください……</p>
         )}
       </div>
     )
@@ -902,7 +898,8 @@ const App = () => (
 
 const Home = () => (
   <div>
-    <Link to='/create-room'>Create a room to play</Link>
+    <p>（◕‿‿◕）下のリンクから部屋を作って、出題者になってよ</p>
+    <Link to='/create-room'>あそぶ部屋を作る</Link>
   </div>
 )
 
@@ -920,7 +917,7 @@ const RoomNotFound = ({ location }) => (
     <h2>お探しの部屋は見つかりませんでした</h2>
     <p>
       この部屋は削除されたか、もともと存在しませんでした。
-      中に居る人が全員居なくなると部屋は自動的に削除されます。許して。
+      中に居る人が全員居なくなると部屋は自動的に削除されます。ゆるして
     </p>
     <p>
       <Link to='/create-room'>
@@ -975,12 +972,13 @@ class IssueAccount extends Component {
       case this.STAGE.WAITING_INPUT:
         return (
           <div className='IssueAccount'>
+            <h2>イントロクイズに招待されています</h2>
             <form onSubmit={this.handleSubmit}>
               <label>
-                Name
+                あなたの名前：
                 <input type='text' ref={this.inputName} />
               </label>
-              <button type='submit'>Submit</button>
+              <button type='submit'>参加</button>
             </form>
           </div>
         )
