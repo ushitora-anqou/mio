@@ -1,8 +1,9 @@
 const uuid = require('uuid/v4')
 const config = require('./config')
+const chalk = require('chalk')
 
 function console_log (str) {
-  config.noprint || console.log(str)
+  config.noprint || console.log(chalk.yellow('[mio] ' + str))
 }
 
 const STAGE = {
@@ -46,6 +47,7 @@ async function main () {
         param.masterName,
         STAGE.WAITING_QUIZ_MUSIC
       )
+      log(`Create a room: ${roomid}`)
       done(uid, password, roomid)
     })
 
@@ -57,6 +59,7 @@ async function main () {
         return
       }
       const { uid, password } = await db.createUser(roomid, param.name)
+      log(`Issue an uid: ${uid}`)
       done(uid, password)
     })
 
@@ -205,6 +208,10 @@ async function main () {
       })
 
       return
+    })
+
+    socket.on('disconnect', () => {
+      log('Disconnect')
     })
   })
 }
