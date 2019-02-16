@@ -193,6 +193,7 @@ class WaitMusic extends Component {
     this.state = { sending: false }
 
     this.inputMusicFile = React.createRef()
+    this.urlRef = React.createRef()
   }
 
   handleSubmit = async e => {
@@ -237,17 +238,44 @@ class WaitMusic extends Component {
     return (
       <div className='WaitMusic'>
         {this.props.master && (
-          <form onSubmit={this.handleSubmit}>
-            <input type='file' accept='audio/*' ref={this.inputMusicFile} />
-            <button
-              type='submit'
-              disabled={this.state.sending || !this.context.established}
-            >
-              Send
-            </button>
-          </form>
+          <div>
+            <h2>問題曲を出題する</h2>
+            <form onSubmit={this.handleSubmit}>
+              <input type='file' accept='audio/*' ref={this.inputMusicFile} />
+              <button
+                type='submit'
+                disabled={this.state.sending || !this.context.established}
+              >
+                出題
+              </button>
+            </form>
+          </div>
         )}
-        <p>Waiting music</p>
+        {!this.props.master && (
+          <div>
+            <p>問題曲が届くのを待っています……</p>
+          </div>
+        )}
+
+        <div>
+          <label>
+            クイズの参加者にはこのページのURLを共有して下さい：
+            <input
+              type='text'
+              value={window.location.href}
+              ref={this.urlRef}
+              readonly
+            />
+          </label>
+          <button
+            onClick={() => {
+              this.urlRef.current.select()
+              document.execCommand('Copy')
+            }}
+          >
+            URLをコピーする
+          </button>
+        </div>
       </div>
     )
   }
@@ -811,7 +839,11 @@ class QuizRoom extends Component {
     }
 
     return (
-      <SocketContext.Provider value={{ established: this.state.established }}>
+      <SocketContext.Provider
+        value={{
+          established: this.state.established
+        }}
+      >
         <div className='QuizRoom'>
           <ConnectionStatus />
           <SceneView
@@ -1015,9 +1047,10 @@ class CreateRoom extends Component {
 
     return (
       <div className='CreateRoom'>
+        <h2>あたらしい部屋を作成する</h2>
         <form onSubmit={this.onSubmit}>
           <label>
-            Name
+            あなたの名前：
             <input type='text' ref={this.inputName} />
           </label>
           <button type='submit' disabled={this.state.sending}>

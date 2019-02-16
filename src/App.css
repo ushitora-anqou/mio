@@ -1,5 +1,5 @@
 .App {
-  width: 800px;
+  width: 1000px;
   margin: 1% auto;
 }
 
@@ -12,8 +12,13 @@
 }
 
 .SceneView {
+  width: 500px;
   display: block;
   float: left;
+}
+
+.WaitMusic > div {
+  margin: 20px;
 }
 
 .ChatWindow {
