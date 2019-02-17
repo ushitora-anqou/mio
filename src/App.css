@@ -23,6 +23,58 @@
   height: 50px;
 }
 
+.FileListContainer {
+  padding: 0;
+  width: 500px;
+  height: 300px;
+  overflow-y: scroll;
+  border: 1px solid #ccc;
+}
+
+.FileListContainer span {
+  display: block;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  padding-left: 10px;
+  height: 30px;
+  border: 1px solid #ccc;
+  vertical-align: center;
+}
+
+.FileListContainer input[type="radio"] {
+  display: none;
+}
+
+.FileListContainer input[type="radio"]:checked + span {
+  background-color: #ccc;
+}
+
+.FileListAddButton {
+  display: inline-block;
+  color: white;
+  background-color: green;
+  padding: 6px;
+  border-radius: 12px;
+}
+
+.FileListAddButton > input[type="file"] {
+  display: none;
+}
+
+.FileListAllDeleteButton {
+  display: inline-block;
+  color: white;
+  background-color: red;
+  padding: 6px;
+  border-radius: 12px;
+  margin-left: 20px;
+}
+
+.FileListAllDeleteButton > input[type="button"] {
+  display: none;
+}
+
 .ShareURL {
   padding: 50px 0px;
 }
@@ -99,6 +151,8 @@
 
 .InputCorrectAnswer {
   padding-bottom: 20px;
+  display: grid;
+  grid-template-columns: 50px 1fr;
 }
 
 .SelectCorrectAnswer button {

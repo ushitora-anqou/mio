@@ -185,9 +185,12 @@ class WaitMusic extends Component {
   constructor (props) {
     super(props)
 
-    this.state = { sending: false, random: false }
-
-    this.inputMusicFile = React.createRef()
+    this.state = {
+      sending: false,
+      random: false,
+      files: [],
+      selectedFile: null
+    }
   }
 
   handleSubmit = async e => {
@@ -196,9 +199,7 @@ class WaitMusic extends Component {
 
     let musicBuf = null
     try {
-      if (this.inputMusicFile.current.files.length !== 1)
-        throw new Error('The number of specified files should be one.')
-      const file = this.inputMusicFile.current.files[0]
+      const file = this.state.selectedFile
       if (file.size > 20000000) throw new Error('The file is too big.')
       musicBuf = await trimMusic(
         await readFileAsync(file),
@@ -223,7 +224,10 @@ class WaitMusic extends Component {
     }
 
     if (musicBuf) {
-      this.props.onSendMusic(musicBuf)
+      this.props.onSendMusic({
+        music: musicBuf,
+        title: this.state.selectedFile.name
+      })
       this.timerID = setTimeout(() => {
         this.setState({ sending: false })
       }, 2000)
@@ -241,9 +245,11 @@ class WaitMusic extends Component {
           <div>
             <h2>問題曲を出題する</h2>
             <form onSubmit={this.handleSubmit}>
-              <div>
-                <input type='file' accept='audio/*' ref={this.inputMusicFile} />
-              </div>
+              <FileList
+                files={this.state.files}
+                onChange={files => this.setState({ files })}
+                onSelect={file => this.setState({ selectedFile: file })}
+              />
               <div>
                 <label>
                   <input
@@ -257,7 +263,11 @@ class WaitMusic extends Component {
               <div>
                 <button
                   type='submit'
-                  disabled={this.state.sending || !this.context.established}
+                  disabled={
+                    this.state.sending ||
+                    !this.context.established ||
+                    !this.state.selectedFile
+                  }
                 >
                   出題
                 </button>
@@ -274,6 +284,47 @@ class WaitMusic extends Component {
       </div>
     )
   }
+}
+
+function FileList (props) {
+  return (
+    <div className='FileList'>
+      <p>曲を選んでください。</p>
+      <div className='FileListContainer'>
+        {props.files.map(file => (
+          <label>
+            <input
+              type='radio'
+              name='FileListEntry'
+              onChange={() => props.onSelect(file)}
+            />
+            <span>{file.name}</span>
+          </label>
+        ))}
+      </div>
+      <label className='FileListAddButton'>
+        ＋曲を追加
+        <input
+          type='file'
+          accept='audio/*'
+          multiple='multiple'
+          onChange={e => {
+            e.preventDefault()
+            props.onChange(props.files.concat(Array.from(e.target.files)))
+          }}
+        />
+      </label>
+      <label className='FileListAllDeleteButton'>
+        全削除
+        <input
+          type='button'
+          onClick={e => {
+            props.onChange([])
+          }}
+        />
+      </label>
+    </div>
+  )
 }
 
 function ShareURL (props) {
@@ -491,10 +542,8 @@ class SelectCorrectAnswer extends Component {
 function InputCorrectAnswer (props) {
   return (
     <div className='InputCorrectAnswer'>
-      <label>
-        正答：
-        <input type='text' value={props.answer} onChange={props.onChange} />
-      </label>
+      <label>正答：</label>
+      <input type='text' value={props.answer} onChange={props.onChange} />
     </div>
   )
 }
@@ -774,12 +823,12 @@ class SceneView extends Component {
     })
   }
 
-  handleSendMusic = music => {
+  handleSendMusic = ({ music, title }) => {
     this._emitAndChangeScene(
       'quiz-music',
       { buf: music },
       this.SCENE.SELECT_CORRECT_ANSWER,
-      { answers: {}, answer: '' }
+      { answers: {}, answer: title }
     )
   }
 
