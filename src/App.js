@@ -29,16 +29,11 @@ function readFileAsync (file) {
   })
 }
 
-async function extractHeadOfMusic (
-  encodedBuf,
-  seconds,
-  channels,
-  sampleRate,
-  kbps
-) {
+async function trimMusic (encodedBuf, channels, sampleRate, kbps, calcPos) {
   // get PCM wave of the head of the music
   const audioCtx = new AudioContext()
   const decodedBuf = await audioCtx.decodeAudioData(encodedBuf)
+  const { offset, seconds } = calcPos(decodedBuf.duration)
   const offlineCtx = new OfflineAudioContext(
     channels,
     sampleRate * seconds,
@@ -47,7 +42,7 @@ async function extractHeadOfMusic (
   const source = offlineCtx.createBufferSource()
   source.buffer = decodedBuf
   source.connect(offlineCtx.destination)
-  source.start()
+  source.start(0, offset, seconds)
   const renderedBuf = await offlineCtx.startRendering()
 
   // convert PCM to MP3 by using lamejs
@@ -190,10 +185,9 @@ class WaitMusic extends Component {
   constructor (props) {
     super(props)
 
-    this.state = { sending: false }
+    this.state = { sending: false, random: false }
 
     this.inputMusicFile = React.createRef()
-    this.urlRef = React.createRef()
   }
 
   handleSubmit = async e => {
@@ -206,12 +200,18 @@ class WaitMusic extends Component {
         throw new Error('The number of specified files should be one.')
       const file = this.inputMusicFile.current.files[0]
       if (file.size > 20000000) throw new Error('The file is too big.')
-      musicBuf = await extractHeadOfMusic(
+      musicBuf = await trimMusic(
         await readFileAsync(file),
-        15,
         2,
         44100,
-        128
+        128,
+        duration => {
+          const seconds = 15
+          if (duration < seconds) return { offset: 0, seconds: duration }
+          if (!this.state.random) return { offset: 0, seconds }
+          const offset = Math.random() * (duration - seconds)
+          return { offset, seconds }
+        }
       )
       if (!musicBuf)
         new Error(
@@ -241,13 +241,27 @@ class WaitMusic extends Component {
           <div>
             <h2>問題曲を出題する</h2>
             <form onSubmit={this.handleSubmit}>
-              <input type='file' accept='audio/*' ref={this.inputMusicFile} />
-              <button
-                type='submit'
-                disabled={this.state.sending || !this.context.established}
-              >
-                出題
-              </button>
+              <div>
+                <input type='file' accept='audio/*' ref={this.inputMusicFile} />
+              </div>
+              <div>
+                <label>
+                  <input
+                    type='checkbox'
+                    checked={this.state.random}
+                    onChange={e => this.setState({ random: e.target.checked })}
+                  />
+                  再生位置をランダムにする
+                </label>
+              </div>
+              <div>
+                <button
+                  type='submit'
+                  disabled={this.state.sending || !this.context.established}
+                >
+                  出題
+                </button>
+              </div>
             </form>
           </div>
         )}
@@ -256,29 +270,30 @@ class WaitMusic extends Component {
             <p>問題曲が届くのを待っています……</p>
           </div>
         )}
-
-        <div>
-          <label>
-            クイズの参加者にはこのページのURLを共有して下さい：
-            <input
-              type='text'
-              value={window.location.href}
-              ref={this.urlRef}
-              readOnly
-            />
-          </label>
-          <button
-            onClick={() => {
-              this.urlRef.current.select()
-              document.execCommand('Copy')
-            }}
-          >
-            URLをコピーする
-          </button>
-        </div>
+        <ShareURL />
       </div>
     )
   }
+}
+
+function ShareURL (props) {
+  const urlRef = React.createRef()
+  return (
+    <div className='ShareURL'>
+      <div>
+        <label>クイズの参加者にはこのページのURLを共有して下さい：</label>
+        <input type='text' value={window.location.href} ref={urlRef} readOnly />
+        <button
+          onClick={() => {
+            urlRef.current.select()
+            document.execCommand('Copy')
+          }}
+        >
+          コピー
+        </button>
+      </div>
+    </div>
+  )
 }
 
 class PlayAndAnswer extends Component {
