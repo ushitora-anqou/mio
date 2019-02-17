@@ -429,43 +429,59 @@ class SelectCorrectAnswer extends Component {
     this.props.onSendResult()
   }
 
+  handleAnswerChange = e => {
+    this.props.onAnswerChange(e.target.value)
+  }
+
   render () {
+    const answer = this.props.answer
     const answers = this.props.answers
     const canSendResult = () => {
-      return Object.keys(answers).every(uid =>
-        answers[uid].hasOwnProperty('judge')
+      return (
+        isPrintable(answer) &&
+        Object.keys(answers).every(uid => answers[uid].hasOwnProperty('judge'))
       )
     }
 
     return (
       <div className='SelectCorrectAnswer'>
         <h2>採点</h2>
+        <InputCorrectAnswer
+          answer={answer}
+          onChange={this.handleAnswerChange}
+        />
         {isEmpty(answers) ? (
-          <div>
-            <p>回答を待っています……</p>
-            <button onClick={this.props.onReset}>次のゲームへ</button>
-          </div>
+          <p>解答を待っています……</p>
         ) : (
-          <div>
-            <ShowResultEntries
-              entries={answers}
-              onClickOk={this.props.onCheckOk}
-              onClickNg={this.props.onCheckNg}
-              judging={true}
-            />
-            {canSendResult() && (
-              <button
-                onClick={this.props.onSendResult}
-                disabled={this.state.sending || !this.context.established}
-              >
-                採点終了
-              </button>
-            )}
-          </div>
+          <ShowResultEntries
+            entries={answers}
+            onClickOk={this.props.onCheckOk}
+            onClickNg={this.props.onCheckNg}
+            judging={true}
+          />
+        )}
+        {canSendResult() && (
+          <button
+            onClick={this.props.onSendResult}
+            disabled={this.state.sending || !this.context.established}
+          >
+            採点終了
+          </button>
         )}
       </div>
     )
   }
+}
+
+function InputCorrectAnswer (props) {
+  return (
+    <div className='InputCorrectAnswer'>
+      <label>
+        正答：
+        <input type='text' value={props.answer} onChange={props.onChange} />
+      </label>
+    </div>
+  )
 }
 
 function ShowResultEntries (props) {
@@ -555,10 +571,11 @@ class ShowResult extends Component {
     return (
       <div className='ShowResult'>
         <h2>採点結果</h2>
-        {isEmpty(this.props.answers) ? (
+        {!this.props.answer ? (
           <p>採点が終了するのを待っています……</p>
         ) : (
           <div>
+            <p>正答：{this.props.answer}</p>
             <ShowResultEntries entries={this.props.answers} judging={false} />
             {this.props.master && (
               <button
@@ -567,7 +584,7 @@ class ShowResult extends Component {
               >
                 次のゲームへ
               </button>
-            )}{' '}
+            )}
           </div>
         )}
       </div>
@@ -637,8 +654,9 @@ class SceneView extends Component {
             onCheckOk={key => this.handleCheckAnswer(key, true)}
             onCheckNg={key => this.handleCheckAnswer(key, false)}
             onSendResult={this.handleSendAnswerResult}
-            onReset={this.handleResetResult}
+            answer={this.state.scene.answer}
             answers={this.state.scene.answers}
+            onAnswerChange={this.handleAnswerChange}
           />
         )
         break
@@ -646,12 +664,17 @@ class SceneView extends Component {
       case S.SHOW_RESULT:
         content = this.props.master ? (
           <ShowResult
+            answer={this.state.scene.answer}
             answers={this.state.scene.answers}
             master={true}
             onReset={this.handleResetResult}
           />
         ) : (
-          <ShowResult answers={this.state.scene.answers} master={false} />
+          <ShowResult
+            answer={this.state.scene.answer}
+            answers={this.state.scene.answers}
+            master={false}
+          />
         )
         break
 
@@ -741,7 +764,7 @@ class SceneView extends Component {
       'quiz-music',
       { buf: music },
       this.SCENE.SELECT_CORRECT_ANSWER,
-      { answers: {} }
+      { answers: {}, answer: '' }
     )
   }
 
@@ -753,11 +776,23 @@ class SceneView extends Component {
     }))
   }
 
+  handleAnswerChange = answer => {
+    this.setState((state, props) => ({
+      scene: update(state.scene, { answer: { $set: answer } })
+    }))
+  }
+
   handleSendAnswerResult = () => {
-    const answers = this.state.scene.answers
-    this._emitAndChangeScene('quiz-result', answers, this.SCENE.SHOW_RESULT, {
-      answers
-    })
+    const result = {
+      answer: this.state.scene.answer,
+      answers: this.state.scene.answers
+    }
+    this._emitAndChangeScene(
+      'quiz-result',
+      result,
+      this.SCENE.SHOW_RESULT,
+      result
+    )
   }
 
   handleResetResult = () => {
@@ -769,7 +804,7 @@ class SceneView extends Component {
       'quiz-answer',
       { time, answer },
       this.SCENE.SHOW_RESULT,
-      { answers: {} }
+      { answers: {}, answer: '' }
     )
   }
 
@@ -796,8 +831,17 @@ class SceneView extends Component {
   }
 
   onQuizResult = msg => {
-    if (!this._checkScene(this.SCENE.SHOW_RESULT)) return
-    this._changeScene(this.SCENE.SHOW_RESULT, { answers: msg })
+    if (
+      !(
+        this._checkScene(this.SCENE.PLAY_AND_ANSWER) ||
+        this._checkScene(this.SCENE.SHOW_RESULT)
+      )
+    )
+      return
+    this._changeScene(this.SCENE.SHOW_RESULT, {
+      answers: msg.answers,
+      answer: msg.answer
+    })
   }
 
   onQuizReset = msg => {

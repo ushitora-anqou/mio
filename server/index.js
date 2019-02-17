@@ -38,7 +38,7 @@ async function main () {
       console_log('[' + socket.id + '] ' + msg)
     }
 
-    log('Connect')
+    log(`Connect: ${handshake}`)
 
     socket.on('error', err => {
       log('Error: ' + JSON.stringify(err))
