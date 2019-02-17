@@ -13,6 +13,46 @@
   margin: 20px;
 }
 
+.WaitMusic form > div {
+  margin: 10px;
+}
+
+.WaitMusic button[type="submit"] {
+  margin-top: 10px;
+  width: 300px;
+  height: 50px;
+}
+
+.ShareURL {
+  padding: 50px 0px;
+}
+
+.ShareURL > div {
+  border: 5px solid #ccc;
+  border-radius: 10px;
+  background-color: #ccc;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 300px 130px;
+  grid-template-rows: 30px 30px;
+}
+
+.ShareURL label {
+  grid-column: 1 / 3;
+  grid-row: 1/2;
+}
+
+.ShareURL input {
+  grid-column: 1/2;
+  grid-row: 2/3;
+  font-size: 16px;
+}
+
+.ShareURL button {
+  grid-column: 2/3;
+  grid-row: 2/3;
+}
+
 .PlayMusic > button {
   width: 70%;
   height: 100px;
