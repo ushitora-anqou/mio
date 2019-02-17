@@ -187,7 +187,8 @@ class WaitMusic extends Component {
 
     this.state = {
       sending: false,
-      random: false,
+      randomPlay: false,
+      randomSelect: false,
       files: [],
       selectedFile: null
     }
@@ -199,7 +200,14 @@ class WaitMusic extends Component {
 
     let musicBuf = null
     try {
-      const file = this.state.selectedFile
+      let file = this.state.selectedFile
+      if (this.state.randomSelect) {
+        file = this.state.files[
+          Math.floor(Math.random() * this.state.files.length)
+        ]
+        this.setState({ selectedFile: file })
+      }
+
       if (file.size > 20000000) throw new Error('The file is too big.')
       musicBuf = await trimMusic(
         await readFileAsync(file),
@@ -209,7 +217,7 @@ class WaitMusic extends Component {
         duration => {
           const seconds = 15
           if (duration < seconds) return { offset: 0, seconds: duration }
-          if (!this.state.random) return { offset: 0, seconds }
+          if (!this.state.randomPlay) return { offset: 0, seconds }
           const offset = Math.random() * (duration - seconds)
           return { offset, seconds }
         }
@@ -254,8 +262,22 @@ class WaitMusic extends Component {
                 <label>
                   <input
                     type='checkbox'
-                    checked={this.state.random}
-                    onChange={e => this.setState({ random: e.target.checked })}
+                    checked={this.state.randomSelect}
+                    onChange={e =>
+                      this.setState({ randomSelect: e.target.checked })
+                    }
+                  />
+                  勝手に選曲する
+                </label>
+              </div>
+              <div>
+                <label>
+                  <input
+                    type='checkbox'
+                    checked={this.state.randomPlay}
+                    onChange={e =>
+                      this.setState({ randomPlay: e.target.checked })
+                    }
                   />
                   再生位置をランダムにする
                 </label>
@@ -266,7 +288,8 @@ class WaitMusic extends Component {
                   disabled={
                     this.state.sending ||
                     !this.context.established ||
-                    !this.state.selectedFile
+                    (!this.state.randomSelect && !this.state.selectedFile) ||
+                    this.state.files.length === 0
                   }
                 >
                   出題
