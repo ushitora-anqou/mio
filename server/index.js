@@ -1,9 +1,89 @@
 const uuid = require('uuid/v4')
 const config = require('./config')
 const chalk = require('chalk')
+const Joi = require('joi')
 
 function console_log (str) {
   config.noprint || console.log(chalk.yellow('[mio] ' + str))
+}
+
+const schema = {}
+// $ echo "寿限無寿限無五劫の擦り切れ海砂利水魚の水行末雲来末風来末食う寝る処に住む処藪ら柑子の藪柑子パイポパイポパイポのシューリンガンシューリンガンのグーリンダイグーリンダイのポンポコピーのポンポコナーの長久命の長助" | wc -m
+// 104
+// # Therefore the length of 128 is enough :)
+schema.name = Joi.string().max(128)
+schema.roomid = Joi.string().uuid('uuidv4')
+schema.uid = Joi.string().uuid('uuidv4')
+schema.password = Joi.string().uuid('uuidv4')
+schema.time = Joi.number()
+schema.createRoom = {
+  param: {
+    masterName: schema.name.required()
+  },
+  done: Joi.func().required()
+}
+schema.issueUid = {
+  param: {
+    roomid: schema.roomid.required(),
+    name: schema.name.required()
+  },
+  done: Joi.func().required()
+}
+schema.auth = {
+  uid: schema.uid.required(),
+  password: schema.password.required(),
+  roomid: schema.roomid.required()
+}
+schema.chatMsg = {
+  msg: {
+    tag: Joi.string().required(),
+    body: Joi.string().required()
+  },
+  done: Joi.func().required()
+}
+schema.quizMusic = {
+  msg: {
+    buf: Joi.binary().required()
+  },
+  done: Joi.func().required()
+}
+schema.quizAnswer = {
+  msg: {
+    answer: Joi.string().required(),
+    time: schema.time.required()
+  },
+  done: Joi.func().required()
+}
+schema.quizResult = {
+  msg: {
+    answer: Joi.string().required(),
+    answers: Joi.object().unknown(true)
+  },
+  done: Joi.func().required()
+}
+schema.quizResultAnswer = {
+  uid: schema.uid.required(),
+  name: schema.name.required(),
+  time: schema.time.required(),
+  answer: Joi.string().required(),
+  judge: Joi.boolean().required()
+}
+schema.quizReset = {
+  msg: {
+    message: Joi.string()
+  },
+  done: Joi.func().required()
+}
+
+function validate (value, schema) {
+  if (!value) {
+    console_log('validation failed: value is evaluated to be false')
+    return false
+  }
+
+  const result = Joi.validate(value, schema)
+  if (result.error) console_log(`validation failed: ${result.error}`)
+  return !!result.error
 }
 
 const STAGE = {
@@ -34,56 +114,70 @@ async function main () {
 
   io.on('connection', socket => {
     const handshake = JSON.stringify(socket.handshake)
-    const log = msg => {
+    const glog = msg => {
       console_log('[' + socket.id + '] ' + msg)
     }
 
-    log(`Connect: ${handshake}`)
+    glog(`Connect: ${handshake}`)
 
     socket.on('error', err => {
-      log('Error: ' + JSON.stringify(err))
+      glog('Error: ' + JSON.stringify(err))
     })
 
     socket.on('create-room', async (param, done) => {
+      if (validate({ param, done }, schema.createRoom)) {
+        glog('create-room failed')
+        return
+      }
+
       const { uid, password, roomid } = await db.createRoom(
         { name: param.masterName, handshake },
         STAGE.WAITING_QUIZ_MUSIC
       )
-      log(`Create a room: ${roomid}`)
+      glog(`Create a room: ${roomid}`)
       done(uid, password, roomid)
     })
 
     socket.on('issue-uid', async (param, done) => {
+      if (validate({ param, done }, schema.issueUid)) {
+        glog('issue-uid failed')
+        return
+      }
+
       const roomid = param.roomid
       if (!(await db.roomExists(roomid))) {
-        log('roomid ' + roomid + ' not found')
+        glog('roomid ' + roomid + ' not found')
         done(null, null)
         return
       }
+
       const { uid, password } = await db.createUser(
         roomid,
         param.name,
         handshake
       )
-      log(`Issue an uid: ${uid}`)
+
+      glog(`Issue an uid: ${uid}`)
+
       done(uid, password)
     })
 
     socket.emit('auth', {}, async (uid, password, roomid) => {
-      const log = msg => {
-        console_log(`[${socket.id}][${uid} / ${roomid}] ${msg}`)
-      }
-
       // check if auth is correct
       if (
         !(
+          !validate({ uid, password, roomid }, schema.auth) &&
           (await db.userExists(uid, password, roomid)) &&
           !(await db.isIn(uid, roomid))
         )
       ) {
-        log('auth failed')
+        glog('auth failed')
         socket.emit('auth-result', { status: 'ng' })
         return
+      }
+
+      const log = msg => {
+        glog(`[${uid} / ${roomid}] ${msg}`)
       }
 
       socket.join(roomid)
@@ -114,6 +208,11 @@ async function main () {
       }
 
       socket.on('chat-msg', (msg, done) => {
+        if (validate({ msg, done }, schema.chatMsg)) {
+          glog('chat-msg failed')
+          return
+        }
+
         //log('chat-msg: ' + msg)
         sendChatMsg(msg.tag, msg.body)
         done()
@@ -122,6 +221,7 @@ async function main () {
       socket.on('quiz-music', async (msg, done) => {
         if (
           !(
+            !validate({ msg, done }, schema.quizMusic) &&
             (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)) &&
             (await db.getRoomMasterUid(roomid)) === uid
           )
@@ -143,6 +243,7 @@ async function main () {
 
         if (
           !(
+            !validate({ msg, done }, schema.quizAnswer) &&
             (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) &&
             master !== undefined
           )
@@ -164,7 +265,17 @@ async function main () {
       })
 
       socket.on('quiz-result', async (msg, done) => {
-        if (!(await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER))) {
+        if (
+          !(
+            !validate({ msg, done }, schema.quizResult) &&
+            Object.keys(msg.answers).every(
+              uid =>
+                !validate(uid, schema.uid) &&
+                !validate(msg.answers[uid], schema.quizResultAnswer)
+            ) &&
+            (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER))
+          )
+        ) {
           log('quiz-result failed')
           return
         }
@@ -179,7 +290,10 @@ async function main () {
 
       socket.on('quiz-reset', async (msg, done) => {
         if (
-          !((await db.getSid(await db.getRoomMasterUid(roomid))) !== undefined)
+          !(
+            !validate({ msg, done }, schema.quizReset) &&
+            (await db.getSid(await db.getRoomMasterUid(roomid))) !== undefined
+          )
         ) {
           log('quiz-reset failed')
           return
@@ -221,7 +335,7 @@ async function main () {
     })
 
     socket.on('disconnect', () => {
-      log('Disconnect')
+      glog('Disconnect')
     })
   })
 }
