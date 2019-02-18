@@ -1070,8 +1070,15 @@ class IssueAccount extends Component {
     super(props)
 
     this.STAGE = { WAITING_INPUT: 0, CONNECTING: 1, REDIRECT: 2, ERROR: 3 }
-    this.state = { state: null, stage: this.STAGE.WAITING_INPUT }
+    this.state = { state: null, stage: null }
     this.inputName = React.createRef()
+    this.socket = newSocket()
+
+    this.socket.emit('room-exists', { roomid: this.props.roomid }, exists => {
+      this.setState({
+        stage: exists ? this.STAGE.WAITING_INPUT : this.STAGE.ERROR
+      })
+    })
   }
 
   handleSubmit = e => {
@@ -1079,7 +1086,6 @@ class IssueAccount extends Component {
 
     if (!isPrintable(this.inputName.current.value)) return
 
-    this.socket = newSocket()
     this.socket.emit(
       'issue-uid',
       { name: this.inputName.current.value, roomid: this.props.roomid },
@@ -1131,8 +1137,11 @@ class IssueAccount extends Component {
           />
         )
 
-      default:
+      case this.STAGE.ERROR:
         return <Route component={RoomNotFound} />
+
+      default:
+        return <div />
     }
   }
 }

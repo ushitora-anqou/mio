@@ -16,6 +16,12 @@ schema.roomid = Joi.string().uuid('uuidv4')
 schema.uid = Joi.string().uuid('uuidv4')
 schema.password = Joi.string().uuid('uuidv4')
 schema.time = Joi.number()
+schema.roomExists = {
+  msg: {
+    roomid: schema.roomid.required()
+  },
+  done: Joi.func().required()
+}
 schema.createRoom = {
   param: {
     masterName: schema.name.required()
@@ -136,6 +142,16 @@ async function main () {
       )
       glog(`Create a room: ${roomid}`)
       done(uid, password, roomid)
+    })
+
+    socket.on('room-exists', async (msg, done) => {
+      if (validate({ msg, done }, schema.roomExists)) {
+        done(false)
+        return
+      }
+
+      const exists = await db.roomExists(msg.roomid)
+      done(exists)
     })
 
     socket.on('issue-uid', async (param, done) => {
