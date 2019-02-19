@@ -689,11 +689,7 @@ class SceneView extends Component {
   componentDidUpdate (prevProps) {
     if (this.props.didAuth) {
       // change scene to WAIT_MUSIC or WAIT_RESET after authentication
-      if (
-        !this.props.master &&
-        this.props.waitForReset &&
-        !this._checkScene(this.SCENE.WAIT_RESET)
-      ) {
+      if (!this.props.master && this.props.waitForReset) {
         this._changeScene(this.SCENE.WAIT_RESET)
       } else if (!this._checkScene(this.SCENE.WAIT_MUSIC)) {
         this._changeScene(this.SCENE.WAIT_MUSIC)

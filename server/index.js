@@ -196,24 +196,17 @@ async function main () {
         glog(`[${uid} / ${roomid}] ${msg}`)
       }
 
-      socket.join(roomid)
-      await db.setSid(uid, socket.id)
-      log('auth')
-
-      // If the master refresh the page, reset the game.
-      // TODO: stable page refreshing
-      if (
-        (await db.getRoomMasterUid(roomid)) === uid &&
-        !(await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC))
-      ) {
-        await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
-        const message =
-          "Sorry! The master's connection to the server was lost, so the game has been reset."
-        socket.to(roomid).emit('quiz-reset', { message })
-      }
-
       const sendUserList = async () => {
         io.to(roomid).emit('users', await db.getAllUsersIn(roomid))
+      }
+
+      const sendQuizInfo = async () => {
+        const round = await db.getRound(roomid)
+        io.to(roomid).emit('quiz-info', {
+          round: (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC))
+            ? round
+            : round - 1
+        })
       }
 
       const sendChatMsg = async (tag, body = '') => {
@@ -227,7 +220,25 @@ async function main () {
         })
       }
 
+      socket.join(roomid)
+      await db.setSid(uid, socket.id)
+      log('auth')
+
+      // If the master refresh the page, reset the game.
+      // TODO: stable page refreshing
+      if (
+        (await db.getRoomMasterUid(roomid)) === uid &&
+        !(await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC))
+      ) {
+        await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
+        sendQuizInfo()
+        const message =
+          "Sorry! The master's connection to the server was lost, so the game has been reset."
+        socket.to(roomid).emit('quiz-reset', { message })
+      }
+
       sendUserList()
+      sendQuizInfo()
 
       socket.on('chat-msg', (msg, done) => {
         if (validate({ msg, done }, schema.chatMsg)) {
@@ -253,6 +264,8 @@ async function main () {
         }
 
         await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)
+        // increment the round in advance to send the new round when this game is reset in between
+        await db.updateRound(roomid)
 
         log('quiz-music: ' + msg.buf.length)
 
@@ -324,11 +337,12 @@ async function main () {
           return
         }
 
-        await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
-
         log('quiz-reset')
 
-        socket.to(roomid).emit('quiz-reset', msg)
+        await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
+
+        sendQuizInfo()
+        socket.to(roomid).emit('quiz-reset', { message: msg.message })
 
         done()
       })

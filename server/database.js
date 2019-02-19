@@ -224,6 +224,11 @@ async function newSequelizeDatabase (url, options) {
     stage: {
       type: Sequelize.INTEGER,
       allowNull: false
+    },
+    round: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 1
     }
   })
 
@@ -347,6 +352,20 @@ async function newSequelizeDatabase (url, options) {
     async updateScore (uid, correct) {
       const user = await this._getUser(uid)
       return user.increment(correct ? 'maru' : 'peke')
+    }
+
+    async _getRoom (roomid) {
+      return Room.findOne({ where: { id: roomid } })
+    }
+
+    async updateRound (roomid) {
+      const oldRoom = await this._getRoom(roomid)
+      const newRoom = await oldRoom.increment('round')
+      return newRoom.round
+    }
+
+    async getRound (roomid) {
+      return (await this._getRoom(roomid)).round
     }
   }
 

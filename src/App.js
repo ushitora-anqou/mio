@@ -64,7 +64,8 @@ class QuizRoom extends Component {
       socket: newSocket(),
       shouldWaitForReset: false,
       didAuth: false,
-      established: null // connecting
+      established: null, // connecting
+      round: null
     }
     this.roomid = props.roomid
 
@@ -73,6 +74,9 @@ class QuizRoom extends Component {
     this.password = props.password
 
     this.socket = this.state.socket
+    this.socket.on('disconnect', () => {
+      this.setState({ established: null })
+    })
     this.socket.on('auth', (x, done) => {
       done(this.uid, this.password, this.roomid)
     })
@@ -83,8 +87,8 @@ class QuizRoom extends Component {
         didAuth: true
       })
     })
-    this.socket.on('disconnect', () => {
-      this.setState({ established: null })
+    this.socket.on('quiz-info', ({ round }) => {
+      this.setState({ round })
     })
   }
 
@@ -101,6 +105,7 @@ class QuizRoom extends Component {
       >
         <div className='QuizRoom'>
           <ConnectionStatus />
+          <QuizStatus round={this.state.round} />
           <SceneView
             master={this.master}
             socket={this.socket}
@@ -132,6 +137,14 @@ class ConnectionStatus extends Component {
       </div>
     )
   }
+}
+
+function QuizStatus (props) {
+  return (
+    <div className='QuizStatus'>
+      <p>Round {props.round}</p>
+    </div>
+  )
 }
 
 const App = () => (
