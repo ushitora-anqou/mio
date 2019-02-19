@@ -179,7 +179,7 @@ function ChatPostForm (props) {
   )
 }
 
-class WaitMusic extends Component {
+class SelectMusic extends Component {
   static contextType = SocketContext
 
   constructor (props) {
@@ -248,65 +248,67 @@ class WaitMusic extends Component {
 
   render () {
     return (
-      <div className='WaitMusic'>
-        {this.props.master && (
-          <div>
-            <h2>問題曲を出題する</h2>
-            <form onSubmit={this.handleSubmit}>
-              <FileList
-                files={this.state.files}
-                onChange={files => this.setState({ files })}
-                onSelect={file => this.setState({ selectedFile: file })}
-              />
-              <div>
-                <label>
-                  <input
-                    type='checkbox'
-                    checked={this.state.randomSelect}
-                    onChange={e =>
-                      this.setState({ randomSelect: e.target.checked })
-                    }
-                  />
-                  勝手に選曲する
-                </label>
-              </div>
-              <div>
-                <label>
-                  <input
-                    type='checkbox'
-                    checked={this.state.randomPlay}
-                    onChange={e =>
-                      this.setState({ randomPlay: e.target.checked })
-                    }
-                  />
-                  再生位置をランダムにする
-                </label>
-              </div>
-              <div>
-                <button
-                  type='submit'
-                  disabled={
-                    this.state.sending ||
-                    !this.context.established ||
-                    (!this.state.randomSelect && !this.state.selectedFile) ||
-                    this.state.files.length === 0
+      <div className='SelectMusic'>
+        <div>
+          <h2>問題曲を出題する</h2>
+          <form onSubmit={this.handleSubmit}>
+            <FileList
+              files={this.state.files}
+              onChange={files => this.setState({ files })}
+              onSelect={file => this.setState({ selectedFile: file })}
+            />
+            <div>
+              <label>
+                <input
+                  type='checkbox'
+                  checked={this.state.randomSelect}
+                  onChange={e =>
+                    this.setState({ randomSelect: e.target.checked })
                   }
-                >
-                  出題
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-        {!this.props.master && (
-          <div>
-            <p>問題曲が届くのを待っています……</p>
-          </div>
-        )}
+                />
+                勝手に選曲する
+              </label>
+            </div>
+            <div>
+              <label>
+                <input
+                  type='checkbox'
+                  checked={this.state.randomPlay}
+                  onChange={e =>
+                    this.setState({ randomPlay: e.target.checked })
+                  }
+                />
+                再生位置をランダムにする
+              </label>
+            </div>
+            <div>
+              <button
+                type='submit'
+                disabled={
+                  this.state.sending ||
+                  !this.context.established ||
+                  (!this.state.randomSelect && !this.state.selectedFile) ||
+                  this.state.files.length === 0
+                }
+              >
+                出題
+              </button>
+            </div>
+          </form>
+        </div>
         <ShareURL />
       </div>
     )
   }
+}
+
+function WaitMusic (props) {
+  return (
+    <div className='WaitMusic'>
+      <p>問題曲が届くのを待っています……</p>
+      <ShareURL />
+    </div>
+  )
 }
 
 function FileList (props) {
@@ -715,13 +717,12 @@ class SceneView extends Component {
     switch (this.state.scene.kind) {
       case S.WAIT_MUSIC:
         content = this.props.master ? (
-          <WaitMusic
-            master={true}
+          <SelectMusic
             onSendMusic={this.handleSendMusic}
             onFailToLoad={this.handleFailToLoadMusicToSend}
           />
         ) : (
-          <WaitMusic master={false} />
+          <WaitMusic />
         )
         break
 
