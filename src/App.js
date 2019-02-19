@@ -334,8 +334,8 @@ function FileList (props) {
           accept='audio/*'
           multiple='multiple'
           onChange={e => {
-            e.preventDefault()
             props.onChange(props.files.concat(Array.from(e.target.files)))
+            e.target.value = ''
           }}
         />
       </label>
