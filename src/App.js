@@ -189,7 +189,6 @@ class SelectMusic extends Component {
       sending: false,
       randomPlay: false,
       randomSelect: false,
-      files: [],
       selectedFile: null
     }
   }
@@ -202,8 +201,8 @@ class SelectMusic extends Component {
     try {
       let file = this.state.selectedFile
       if (this.state.randomSelect) {
-        file = this.state.files[
-          Math.floor(Math.random() * this.state.files.length)
+        file = this.props.files[
+          Math.floor(Math.random() * this.props.files.length)
         ]
         this.setState({ selectedFile: file })
       }
@@ -232,6 +231,12 @@ class SelectMusic extends Component {
     }
 
     if (musicBuf) {
+      this.props.onChangeMusicFileList(
+        update(this.props.files, {
+          $splice: [[this.props.files.indexOf(this.state.selectedFile), 1]]
+        })
+      )
+
       this.props.onSendMusic({
         music: musicBuf,
         title: this.state.selectedFile.name
@@ -253,8 +258,12 @@ class SelectMusic extends Component {
           <h2>問題曲を出題する</h2>
           <form onSubmit={this.handleSubmit}>
             <FileList
-              files={this.state.files}
-              onChange={files => this.setState({ files })}
+              files={this.props.files}
+              onChange={files => {
+                if (files.indexOf(this.state.selectedFile) === -1)
+                  this.setState({ selectedFile: null })
+                return this.props.onChangeMusicFileList(files)
+              }}
               onSelect={file => this.setState({ selectedFile: file })}
             />
             <div>
@@ -288,7 +297,7 @@ class SelectMusic extends Component {
                   this.state.sending ||
                   !this.context.established ||
                   (!this.state.randomSelect && !this.state.selectedFile) ||
-                  this.state.files.length === 0
+                  this.props.files.length === 0
                 }
               >
                 出題
@@ -706,7 +715,8 @@ class SceneView extends Component {
       scene: {
         kind: null
       },
-      message: ''
+      message: '',
+      listedMusicFiles: []
     }
   }
 
@@ -720,6 +730,10 @@ class SceneView extends Component {
           <SelectMusic
             onSendMusic={this.handleSendMusic}
             onFailToLoad={this.handleFailToLoadMusicToSend}
+            files={this.state.listedMusicFiles}
+            onChangeMusicFileList={files =>
+              this.setState({ listedMusicFiles: files })
+            }
           />
         ) : (
           <WaitMusic />
