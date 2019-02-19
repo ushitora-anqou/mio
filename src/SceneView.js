@@ -463,7 +463,7 @@ function ShowResultEntries (props) {
 
   return (
     <div className='ShowResultEntries'>
-      {uids.map(uid => {
+      {uids.map((uid, index) => {
         const entry = entries[uid]
         return (
           <div
@@ -476,6 +476,9 @@ function ShowResultEntries (props) {
                 : 'WrongRow'
             }
           >
+            <div className='ShowResultEntriesColumn ShowResultEntriesColumnIndex'>
+              {index + 1}
+            </div>
             <div className='ShowResultEntriesColumn ShowResultEntriesColumnName'>
               {entry.name}
             </div>

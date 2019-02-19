@@ -128,8 +128,13 @@
   word-wrap: break-word;
 }
 
+.ShowResultEntriesColumnIndex {
+  width: 20px;
+  padding: 10px;
+}
+
 .ShowResultEntriesColumnName {
-  width: 100px;
+  width: 90px;
   padding: 10px;
 }
 
@@ -139,7 +144,7 @@
 }
 
 .ShowResultEntriesColumnAnswer {
-  width: 250px;
+  width: 240px;
   padding: 10px;
 }
 
