@@ -1,0 +1,47 @@
+.ChatWindow {
+  display: block;
+  float: right;
+}
+
+.ChatPostForm {
+  padding-top: 20px;
+}
+
+.ChatPostForm form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
+.ChatHistory {
+  padding: 0;
+  width: 400px;
+  height: 500px;
+  overflow-y: scroll;
+  border: 1px solid #ccc;
+}
+
+.ChatHistoryRow {
+  border-bottom: 1px solid #ccc;
+}
+
+.ChatHistoryRowNotification {
+  background-color: pink;
+}
+
+.ChatHistoryRowName {
+  display: block;
+  padding-left: 8px;
+  padding-top: 4px;
+  font-weight: bold;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ChatHistoryRowBody {
+  display: block;
+  padding-left: 8px;
+  padding-bottom: 8px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
