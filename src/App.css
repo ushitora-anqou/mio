@@ -17,10 +17,13 @@
   border-bottom: 1px solid #ccc;
   padding-left: 30px;
   padding-top: 4px;
+  height: 25px;
+  line-height: 1;
 }
 
 .UserListEntryMe {
   font-weight: bold;
+  border-bottom: 1px solid black;
 }
 
 .UserListEntryOnline {
@@ -44,4 +47,30 @@
   content: "M";
   color: #3498db;
   font-weight: bold;
+}
+
+.UserListEntryName {
+  display: inline-block;
+  width: 50%;
+  height: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  padding-right: 10%;
+}
+
+.UserListEntryMaru {
+  display: inline-block;
+  width: 20%;
+  height: 100%;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.UserListEntryPeke {
+  display: inline-block;
+  width: 20%;
+  height: 100%;
+  line-height: 1;
+  overflow: hidden;
 }

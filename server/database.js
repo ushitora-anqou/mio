@@ -201,6 +201,16 @@ async function newSequelizeDatabase (url, options) {
     handshake: {
       type: Sequelize.TEXT,
       allowNull: false
+    },
+    maru: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
+    peke: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 0
     }
   })
 
@@ -324,8 +334,19 @@ async function newSequelizeDatabase (url, options) {
         uid: user.id,
         name: user.name,
         online: !!user.socketId,
-        master: master === user.id
+        master: master === user.id,
+        maru: user.maru,
+        peke: user.peke
       }))
+    }
+
+    async _getUser (uid) {
+      return User.findOne({ where: { id: uid } })
+    }
+
+    async updateScore (uid, correct) {
+      const user = await this._getUser(uid)
+      return user.increment(correct ? 'maru' : 'peke')
     }
   }
 

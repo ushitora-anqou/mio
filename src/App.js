@@ -26,42 +26,35 @@ class UserList extends Component {
     }
 
     this.props.socket.on('users', users => {
-      console.log(users)
       this.setState({ users })
     })
   }
 
   render () {
+    const myUser = this.state.users.find(user => user.uid === this.props.myUid)
     return (
       <div className='UserList'>
-        {this.state.users
-          .filter(user => user.uid === this.props.myUid)
-          .map(user => (
-            <div
-              className={`UserListEntry UserListEntryOnline UserListEntryMe ${
-                user.master ? 'UserListEntryMaster' : ''
-              }`}
-            >
-              <span>{user.name}</span>
-            </div>
-          ))}
-
+        {myUser && <UserListEntry user={myUser} className='UserListEntryMe' />}
         {this.state.users.map(user => {
           if (user.uid === this.props.myUid) return null
-
-          const online = user.online
-            ? 'UserListEntryOnline'
-            : 'UserListEntryOffline'
-          const master = user.master ? 'UserListEntryMaster' : ''
-          return (
-            <div className={`UserListEntry ${online} ${master}`}>
-              <span>{user.name}</span>
-            </div>
-          )
+          return <UserListEntry user={user} />
         })}
       </div>
     )
   }
+}
+
+function UserListEntry (props) {
+  const user = props.user
+  const online = user.online ? 'UserListEntryOnline' : 'UserListEntryOffline'
+  const master = user.master ? 'UserListEntryMaster' : ''
+  return (
+    <div className={`UserListEntry ${online} ${master} ${props.className}`}>
+      <span className='UserListEntryName'>{user.name}</span>
+      {user.master || <span className='UserListEntryMaru'>{user.maru}○</span>}
+      {user.master || <span className='UserListEntryPeke'>{user.peke}×</span>}
+    </div>
+  )
 }
 
 class QuizRoom extends Component {

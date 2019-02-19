@@ -303,8 +303,11 @@ async function main () {
         }
 
         log('quiz-result: ' + JSON.stringify(msg))
+        for (const uid of Object.keys(msg.answers))
+          await db.updateScore(uid, msg.answers[uid].judge)
         await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_RESET)
 
+        sendUserList()
         socket.to(roomid).emit('quiz-result', msg)
 
         done()
