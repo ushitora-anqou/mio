@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import update from 'immutability-helper'
 import './SceneView.css'
 import { isEmpty, isPrintable, SocketContext } from './helper'
@@ -500,9 +501,7 @@ function ShowResultEntries (props) {
                         return props.onClickOk(entry.uid)
                       }}
                     />
-                    <span role='img' aria-label='check'>
-                      ✔️
-                    </span>
+                    <FontAwesomeIcon icon={['far', 'circle']} />
                   </label>
                   <label>
                     <input
@@ -513,9 +512,7 @@ function ShowResultEntries (props) {
                         return props.onClickNg(entry.uid)
                       }}
                     />
-                    <span role='img' aria-label='x'>
-                      ❌
-                    </span>
+                    <FontAwesomeIcon icon='times' />
                   </label>
                 </div>
               </div>

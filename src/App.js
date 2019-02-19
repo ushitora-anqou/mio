@@ -13,6 +13,12 @@ import { isPrintable, SocketContext } from './helper'
 import ChatWindow from './ChatWindow'
 import SceneView from './SceneView'
 
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faCircle } from '@fortawesome/free-regular-svg-icons'
+import { faTimes } from '@fortawesome/free-solid-svg-icons'
+library.add(faCircle, faTimes)
+
 function newSocket () {
   return io(config.server_uri)
 }
@@ -51,8 +57,18 @@ function UserListEntry (props) {
   return (
     <div className={`UserListEntry ${online} ${master} ${props.className}`}>
       <span className='UserListEntryName'>{user.name}</span>
-      {user.master || <span className='UserListEntryMaru'>{user.maru}○</span>}
-      {user.master || <span className='UserListEntryPeke'>{user.peke}×</span>}
+      {user.master || (
+        <span className='UserListEntryMaru'>
+          {user.maru}
+          <FontAwesomeIcon icon={['far', 'circle']} />
+        </span>
+      )}
+      {user.master || (
+        <span className='UserListEntryPeke'>
+          {user.peke}
+          <FontAwesomeIcon icon='times' />
+        </span>
+      )}
     </div>
   )
 }
