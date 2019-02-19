@@ -104,8 +104,6 @@ class QuizRoom extends Component {
         }}
       >
         <div className='QuizRoom'>
-          <ConnectionStatus />
-          <QuizStatus round={this.state.round} />
           <SceneView
             master={this.master}
             socket={this.socket}
@@ -114,8 +112,12 @@ class QuizRoom extends Component {
             waitForReset={this.state.shouldWaitForReset}
             onProcessForAuth={this.handleProcessForAuth}
           />
-          <UserList socket={this.socket} myUid={this.uid} />
-          <ChatWindow socket={this.socket} />
+          <div>
+            <ConnectionStatus />
+            <QuizStatus round={this.state.round} />
+            <UserList socket={this.socket} myUid={this.uid} />
+            <ChatWindow socket={this.socket} />
+          </div>
         </div>
       </SocketContext.Provider>
     )

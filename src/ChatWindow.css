@@ -1,7 +1,7 @@
 .ChatWindow {
   display: block;
-  float: right;
   margin: 10px;
+  width: 400px;
 }
 
 .ChatPostForm {
@@ -14,7 +14,6 @@
 }
 
 .ChatHistory {
-  width: 400px;
   height: 500px;
   overflow-y: scroll;
   border: 1px solid #ccc;
