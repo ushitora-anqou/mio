@@ -35,23 +35,22 @@
   border: 1px solid #ccc;
 }
 
-.FileListContainer span {
+.FileListContainer > label {
   display: block;
   text-overflow: ellipsis;
   overflow: hidden;
   white-space: nowrap;
-  padding-left: 10px;
   height: 30px;
+  line-height: 30px;
   border: 1px solid #ccc;
-  vertical-align: center;
 }
 
-.FileListContainer input[type="radio"] {
-  display: none;
+.FileListContainer input {
+  margin-left: 10px;
 }
 
-.FileListContainer input[type="radio"]:checked + span {
-  background-color: #ccc;
+.FileListContainer span {
+  padding: 0 10px;
 }
 
 .FileListAddButton {

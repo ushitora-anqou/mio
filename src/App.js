@@ -265,6 +265,7 @@ class SelectMusic extends Component {
                 return this.props.onChangeMusicFileList(files)
               }}
               onSelect={file => this.setState({ selectedFile: file })}
+              disableSelect={this.state.randomSelect}
             />
             <div>
               <label>
@@ -331,8 +332,9 @@ function FileList (props) {
               type='radio'
               name='FileListEntry'
               onChange={() => props.onSelect(file)}
+              disabled={props.disableSelect}
             />
-            <span>{file.name}</span>
+            <span className={props.disableSelect && "FileListEntryDisabled"}>{file.name}</span>
           </label>
         ))}
       </div>
