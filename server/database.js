@@ -316,6 +316,17 @@ async function newSequelizeDatabase (url, options) {
     async setAllUsersSocketId (socketId) {
       return User.update({ socketId }, { where: {} })
     }
+
+    async getAllUsersIn (roomid) {
+      const users = await User.findAll({ where: { roomId: roomid } })
+      const master = await this.getRoomMasterUid(roomid)
+      return users.map(user => ({
+        uid: user.id,
+        name: user.name,
+        online: !!user.socketId,
+        master: master === user.id
+      }))
+    }
   }
 
   await User.sync()

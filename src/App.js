@@ -17,6 +17,53 @@ function newSocket () {
   return io(config.server_uri)
 }
 
+class UserList extends Component {
+  constructor (props) {
+    super(props)
+
+    this.state = {
+      users: []
+    }
+
+    this.props.socket.on('users', users => {
+      console.log(users)
+      this.setState({ users })
+    })
+  }
+
+  render () {
+    return (
+      <div className='UserList'>
+        {this.state.users
+          .filter(user => user.uid === this.props.myUid)
+          .map(user => (
+            <div
+              className={`UserListEntry UserListEntryOnline UserListEntryMe ${
+                user.master ? 'UserListEntryMaster' : ''
+              }`}
+            >
+              <span>{user.name}</span>
+            </div>
+          ))}
+
+        {this.state.users.map(user => {
+          if (user.uid === this.props.myUid) return null
+
+          const online = user.online
+            ? 'UserListEntryOnline'
+            : 'UserListEntryOffline'
+          const master = user.master ? 'UserListEntryMaster' : ''
+          return (
+            <div className={`UserListEntry ${online} ${master}`}>
+              <span>{user.name}</span>
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+}
+
 class QuizRoom extends Component {
   constructor (props) {
     super(props)
@@ -69,6 +116,7 @@ class QuizRoom extends Component {
             waitForReset={this.state.shouldWaitForReset}
             onProcessForAuth={this.handleProcessForAuth}
           />
+          <UserList socket={this.socket} myUid={this.uid} />
           <ChatWindow socket={this.socket} />
         </div>
       </SocketContext.Provider>

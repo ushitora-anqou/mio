@@ -2,3 +2,46 @@
   width: 1000px;
   margin: 1% auto;
 }
+
+.UserList {
+  display: block;
+  float: right;
+  width: 400px;
+  height: 100px;
+  overflow-y: scroll;
+  border: 1px solid #ccc;
+  margin: 10px;
+}
+
+.UserListEntry {
+  border-bottom: 1px solid #ccc;
+  padding-left: 30px;
+  padding-top: 4px;
+}
+
+.UserListEntryMe {
+  font-weight: bold;
+}
+
+.UserListEntryOnline {
+  color: green;
+}
+
+.UserListEntryOffline {
+  color: red;
+}
+
+.UserListEntryMaster {
+  position: relative;
+}
+
+.UserListEntryMaster::after {
+  display: block;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  line-height: 1;
+  content: "M";
+  color: #3498db;
+  font-weight: bold;
+}

@@ -212,6 +212,10 @@ async function main () {
         socket.to(roomid).emit('quiz-reset', { message })
       }
 
+      const sendUserList = async () => {
+        io.to(roomid).emit('users', await db.getAllUsersIn(roomid))
+      }
+
       const sendChatMsg = async (tag, body = '') => {
         body = body || ''
         io.to(roomid).emit('chat-msg', {
@@ -222,6 +226,8 @@ async function main () {
           tag: tag
         })
       }
+
+      sendUserList()
 
       socket.on('chat-msg', (msg, done) => {
         if (validate({ msg, done }, schema.chatMsg)) {
@@ -330,11 +336,14 @@ async function main () {
 
         await db.deleteSidOf(uid)
 
-        // Delete the room if no one is connecting to it
-        if (!(await db.isAnyoneIn(roomid))) {
-          log('Delete room')
-          await db.deleteRoom(roomid)
+        if (await db.isAnyoneIn(roomid)) {
+          sendUserList() // update the list of clients
+          return
         }
+
+        // Delete the room if no one is connecting to it
+        log('Delete room')
+        await db.deleteRoom(roomid)
       })
 
       sendChatMsg('join')
