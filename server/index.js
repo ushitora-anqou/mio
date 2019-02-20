@@ -123,6 +123,7 @@ async function main () {
     const glog = msg => {
       console_log('[' + socket.id + '] ' + msg)
     }
+    let alreadyIssuedUid = false
 
     glog(`Connect: ${handshake}`)
 
@@ -131,7 +132,9 @@ async function main () {
     })
 
     socket.on('create-room', async (param, done) => {
-      if (validate({ param, done }, schema.createRoom)) {
+      if (
+        !(!alreadyIssuedUid && !validate({ param, done }, schema.createRoom))
+      ) {
         glog('create-room failed')
         return
       }
@@ -141,6 +144,7 @@ async function main () {
         STAGE.WAITING_QUIZ_MUSIC
       )
       glog(`Create a room: ${roomid}`)
+      alreadyIssuedUid = true
       done(uid, password, roomid)
     })
 
@@ -155,7 +159,7 @@ async function main () {
     })
 
     socket.on('issue-uid', async (param, done) => {
-      if (validate({ param, done }, schema.issueUid)) {
+      if (!(!alreadyIssuedUid && !validate({ param, done }, schema.issueUid))) {
         glog('issue-uid failed')
         return
       }
@@ -174,6 +178,7 @@ async function main () {
       )
 
       glog(`Issue an uid: ${uid}`)
+      alreadyIssuedUid = true
 
       done(uid, password)
     })
