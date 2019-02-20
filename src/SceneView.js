@@ -358,10 +358,12 @@ function MusicPlayingButton (props) {
   return (
     <>
       {props.playing ? (
-        <button onClick={props.onClickStop}>停止</button>
+        <button onClick={props.onClickStop}>
+          <FontAwesomeIcon icon={['far', 'stop-circle']} />
+        </button>
       ) : (
         <button onClick={props.onClickStart} disabled={props.disabled}>
-          再生
+          <FontAwesomeIcon icon={['far', 'play-circle']} />
         </button>
       )}
     </>
@@ -440,25 +442,7 @@ class SelectCorrectAnswer extends Component {
         <div className='InputCorrectAnswer'>
           <h3>正答</h3>
           <div>
-            <PlayMusic
-              music={this.props.music}
-              render={props => (
-                <>
-                  {props.playing ? (
-                    <button onClick={props.onClickStop}>
-                      <FontAwesomeIcon icon={['far', 'stop-circle']} />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={props.onClickStart}
-                      disabled={props.disabled}
-                    >
-                      <FontAwesomeIcon icon={['far', 'play-circle']} />
-                    </button>
-                  )}
-                </>
-              )}
-            />
+            <PlayMusic music={this.props.music} />
             <InputCorrectAnswer
               answer={answer}
               onChange={this.handleAnswerChange}
