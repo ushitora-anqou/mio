@@ -1,0 +1,10 @@
+{
+    "name": "Mio",
+    "description": "Intro Quiz App",
+    "addons": [
+        {
+            "plan": "heroku-postgresql"
+        }
+    ],
+    "stack": "container"
+}
