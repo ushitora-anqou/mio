@@ -13,7 +13,7 @@
 ## docker
 
 - `docker build --build-arg REACT_APP_SERVER_URI=localhost:5000 -t mio .`
-- `docker run -p 5000:5000 --env-file .env -id --rm mio`
+- `docker run -p 5000:5000 --env-file .env --rm mio`
 
 ## heroku
 

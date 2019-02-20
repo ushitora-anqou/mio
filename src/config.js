@@ -9,7 +9,7 @@ const test = {
 */
 
 const prod = {
-  server_uri: process.env.REACT_APP_SERVER_URI
+  server_uri: undefined
 }
 
 const config = process.env.NODE_ENV === 'production' ? prod : dev
