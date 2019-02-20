@@ -317,6 +317,15 @@ class PlayMusic extends Component {
       })
   }
 
+  _stopMusic () {
+    if (this.source) this.source.stop()
+  }
+
+  componentWillUnmount () {
+    this.source.onended = null
+    this._stopMusic()
+  }
+
   onClickStart = () => {
     if (this.state.music_buf) {
       this.setState({ playing: true })
@@ -337,7 +346,7 @@ class PlayMusic extends Component {
   }
 
   onClickStop = () => {
-    this.source.stop()
+    this._stopMusic()
   }
 
   render () {
