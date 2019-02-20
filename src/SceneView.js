@@ -206,7 +206,9 @@ function FileList (props) {
               onChange={() => props.onSelect(file)}
               disabled={props.disableSelect}
             />
-            <span className={props.disableSelect && 'FileListEntryDisabled'}>
+            <span
+              className={props.disableSelect ? 'FileListEntryDisabled' : ''}
+            >
               {file.name}
             </span>
           </label>

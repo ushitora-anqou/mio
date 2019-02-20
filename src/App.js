@@ -34,20 +34,34 @@ class UserList extends Component {
     this.state = {
       users: []
     }
+  }
 
-    this.props.socket.on('users', users => {
-      this.setState({ users })
-    })
+  componentDidMount () {
+    this.props.socket.on('users', this.onUsers)
+  }
+
+  componentWillUnmount () {
+    this.props.socket.off('users', this.onUsers)
+  }
+
+  onUsers = users => {
+    this.setState({ users })
   }
 
   render () {
     const myUser = this.state.users.find(user => user.uid === this.props.myUid)
     return (
       <div className='UserList'>
-        {myUser && <UserListEntry user={myUser} className='UserListEntryMe' />}
+        {myUser && (
+          <UserListEntry
+            key={myUser.uid}
+            user={myUser}
+            className='UserListEntryMe'
+          />
+        )}
         {this.state.users.map(user => {
           if (user.uid === this.props.myUid) return null
-          return <UserListEntry user={user} />
+          return <UserListEntry key={user.uid} user={user} />
         })}
       </div>
     )
@@ -92,24 +106,41 @@ class QuizRoom extends Component {
     this.master = props.master
     this.uid = props.uid
     this.password = props.password
-
     this.socket = this.state.socket
-    this.socket.on('disconnect', () => {
-      this.setState({ established: null })
+  }
+
+  componentDidMount () {
+    this.socket.on('disconnect', this.onDisconnect)
+    this.socket.on('auth', this.onAuth)
+    this.socket.on('auth-result', this.onAuthResult)
+    this.socket.on('quiz-info', this.onQuizInfo)
+  }
+
+  componentWillUnmount () {
+    this.socket.off('disconnect', this.onDisconnect)
+    this.socket.off('auth', this.onAuth)
+    this.socket.off('auth-result', this.onAuthResult)
+    this.socket.off('quiz-info', this.onQuizInfo)
+  }
+
+  onDisconnect = () => {
+    this.setState({ established: null })
+  }
+
+  onAuth = (x, done) => {
+    done(this.uid, this.password, this.roomid)
+  }
+
+  onAuthResult = ({ status, shouldWaitForReset }) => {
+    this.setState({
+      established: status === 'ok',
+      shouldWaitForReset,
+      didAuth: true
     })
-    this.socket.on('auth', (x, done) => {
-      done(this.uid, this.password, this.roomid)
-    })
-    this.socket.on('auth-result', ({ status, shouldWaitForReset }) => {
-      this.setState({
-        established: status === 'ok',
-        shouldWaitForReset,
-        didAuth: true
-      })
-    })
-    this.socket.on('quiz-info', ({ round }) => {
-      this.setState({ round })
-    })
+  }
+
+  onQuizInfo = ({ round }) => {
+    this.setState({ round })
   }
 
   render () {
