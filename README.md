@@ -1,23 +1,33 @@
 # Mio - Intro Quiz App
 
-## local
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/ushitora-anqou/mio)
+
+## これはなに
+
+サクッとイントロクイズで遊びたい人のためのNodeJS実装。Dockerの上に載っていて、Herokuで使うことを想定しています。
+PostgreSQLをSequelize経由で使っています。サーバはExpressで立っていて、サーバとクライアントの接続を
+Socket.IO経由で行います。フロントエンドはReactです。
+
+## 忙しい人のためのMioの使い方
+
+上の'Deploy to Heroku'ボタンを押してください。
+
+## ローカルで動かしたい人は
+
+Dockerを通して動かそうとするとPostgreSQLをどこで動かすかという問題に遭遇するので、どうにか解決してください。
+私は諦めました。
+
+非Dockerの場合は`yarn install --pure-lockfile`後に`src/config.js`と`server/config.js`を適当にいじってから、
 
 - `yarn start`
 - `node server/index.js`
 
-## prod in local
+です。
 
-- `yarn build`
-- `MIO_PROD=1 PORT=5000 DATABASE_URL="postgres://localhost:5432/testdb" node server/index.js`
+## License
 
-## docker
+MIT.
 
-- `docker build --build-arg REACT_APP_SERVER_URI=localhost:5000 -t mio .`
-- `docker run -p 5000:5000 --env-file .env --rm mio`
+## どうしてこんなのつくったの
 
-## heroku
-
-- `heroku run MIO_PROD=1 node server/index.js`
-
-- `heroku container:push web`
-- `heroku container:release web`
+友だちがお金くれたから。
