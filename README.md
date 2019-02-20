@@ -19,6 +19,5 @@
 
 - `heroku run MIO_PROD=1 node server/index.js`
 
-- `heroku config:set REACT_APP_SERVER_URI=(server's uri)`
 - `heroku container:push web`
 - `heroku container:release web`
