@@ -32,9 +32,11 @@ async function trimMusic (encodedBuf, channels, sampleRate, kbps, calcPos) {
     sampleRate * seconds,
     sampleRate
   )
+  const compressor = offlineCtx.createDynamicsCompressor()
   const source = offlineCtx.createBufferSource()
   source.buffer = decodedBuf
-  source.connect(offlineCtx.destination)
+  source.connect(compressor)
+  compressor.connect(offlineCtx.destination)
   source.start(0, offset, seconds)
   const renderedBuf = await offlineCtx.startRendering()
 
