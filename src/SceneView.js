@@ -288,7 +288,7 @@ class PlayAndAnswer extends Component {
   }
 
   render () {
-    return this.state.scene
+    return <div className='PlayAndAnswer'>{this.state.scene}</div>
   }
 }
 
@@ -308,22 +308,25 @@ class PlayMusic extends Component {
       })
       .catch(err => {
         // Can't load the music file.
-        // TODO: What is the BA?
-        props.onFailToLoad()
+        console.log(err)
+        if (props.onFailToLoad) props.onFailToLoad()
       })
   }
 
   onClickStart = () => {
     if (this.state.music_buf) {
       this.setState({ playing: true })
-      this.props.onMusicStart(this.audioCtx.currentTime)
+      if (this.props.onMusicStart)
+        this.props.onMusicStart(this.audioCtx.currentTime)
 
       // play the music
       this.source = this.audioCtx.createBufferSource()
       this.source.buffer = this.state.music_buf
       this.source.connect(this.audioCtx.destination)
       this.source.onended = () => {
-        this.props.onMusicStop(this.audioCtx.currentTime)
+        this.setState({ playing: false })
+        if (this.props.onMusicStop)
+          this.props.onMusicStop(this.audioCtx.currentTime)
       }
       this.source.start(0)
     }
@@ -334,21 +337,31 @@ class PlayMusic extends Component {
   }
 
   render () {
-    return (
-      <div className='PlayMusic'>
-        {this.state.playing ? (
-          <button onClick={this.onClickStop}>停止</button>
-        ) : (
-          <button
-            onClick={this.onClickStart}
-            disabled={this.state.music_buf ? false : true}
-          >
-            再生
-          </button>
-        )}
-      </div>
-    )
+    const props = {
+      disabled: this.state.music_buf ? false : true,
+      playing: this.state.playing,
+      onClickStart: this.onClickStart,
+      onClickStop: this.onClickStop
+    }
+
+    if (this.props.render) return this.props.render(props)
+
+    return <MusicPlayingButton {...props} />
   }
+}
+
+function MusicPlayingButton (props) {
+  return (
+    <>
+      {props.playing ? (
+        <button onClick={props.onClickStop}>停止</button>
+      ) : (
+        <button onClick={props.onClickStart} disabled={props.disabled}>
+          再生
+        </button>
+      )}
+    </>
+  )
 }
 
 class InputAnswer extends Component {
@@ -371,7 +384,7 @@ class InputAnswer extends Component {
 
   render () {
     return (
-      <div className='InputAnswer'>
+      <>
         <form onSubmit={this.handleSubmit}>
           <label>
             答え：
@@ -384,7 +397,7 @@ class InputAnswer extends Component {
             送信
           </button>
         </form>
-      </div>
+      </>
     )
   }
 }
@@ -420,28 +433,56 @@ class SelectCorrectAnswer extends Component {
     return (
       <div className='SelectCorrectAnswer'>
         <h2>採点</h2>
-        <InputCorrectAnswer
-          answer={answer}
-          onChange={this.handleAnswerChange}
-        />
-        {isEmpty(answers) ? (
-          <p>解答を待っています……</p>
-        ) : (
-          <ShowResultEntries
-            entries={answers}
-            onClickOk={this.props.onCheckOk}
-            onClickNg={this.props.onCheckNg}
-            judging={true}
-          />
-        )}
-        {canSendResult() && (
-          <button
-            onClick={this.props.onSendResult}
-            disabled={this.state.sending || !this.context.established}
-          >
-            採点終了
-          </button>
-        )}
+        <div className='InputCorrectAnswer'>
+          <h3>正答</h3>
+          <div>
+            <PlayMusic
+              music={this.props.music}
+              render={props => (
+                <>
+                  {props.playing ? (
+                    <button onClick={props.onClickStop}>
+                      <FontAwesomeIcon icon={['far', 'stop-circle']} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={props.onClickStart}
+                      disabled={props.disabled}
+                    >
+                      <FontAwesomeIcon icon={['far', 'play-circle']} />
+                    </button>
+                  )}
+                </>
+              )}
+            />
+            <InputCorrectAnswer
+              answer={answer}
+              onChange={this.handleAnswerChange}
+            />
+          </div>
+        </div>
+        <div>
+          <h3>解答</h3>
+          {isEmpty(answers) ? (
+            <p>解答を待っています……</p>
+          ) : (
+            <ShowResultEntries
+              entries={answers}
+              onClickOk={this.props.onCheckOk}
+              onClickNg={this.props.onCheckNg}
+              judging={true}
+            />
+          )}
+          {canSendResult() && (
+            <button
+              className='SelectCorrectAnswerScoringEnd'
+              onClick={this.props.onSendResult}
+              disabled={this.state.sending || !this.context.established}
+            >
+              採点終了
+            </button>
+          )}
+        </div>
       </div>
     )
   }
@@ -449,10 +490,9 @@ class SelectCorrectAnswer extends Component {
 
 function InputCorrectAnswer (props) {
   return (
-    <div className='InputCorrectAnswer'>
-      <label>正答：</label>
+    <>
       <input type='text' value={props.answer} onChange={props.onChange} />
-    </div>
+    </>
   )
 }
 
@@ -632,6 +672,7 @@ class SceneView extends Component {
             answer={this.state.scene.answer}
             answers={this.state.scene.answers}
             onAnswerChange={this.handleAnswerChange}
+            music={this.state.scene.music}
           />
         )
         break
@@ -738,7 +779,7 @@ class SceneView extends Component {
       'quiz-music',
       { buf: music },
       this.SCENE.SELECT_CORRECT_ANSWER,
-      { answers: {}, answer: title }
+      { music: music.buffer, answers: {}, answer: title }
     )
   }
 

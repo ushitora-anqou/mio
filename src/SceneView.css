@@ -1,7 +1,6 @@
 .SceneView {
   width: 500px;
   display: block;
-  float: left;
 }
 
 .WaitMusic {
@@ -102,7 +101,7 @@
   grid-row: 2/3;
 }
 
-.PlayMusic > button {
+.PlayAndAnswer > button {
   width: 70%;
   height: 100px;
 }
@@ -151,13 +150,18 @@
   width: 20px;
 }
 
-.InputCorrectAnswer {
-  padding-bottom: 20px;
+.InputCorrectAnswer > div {
   display: grid;
-  grid-template-columns: 50px 1fr;
+  grid-template-columns: 60px 1fr;
+  grid-template-rows: 50px;
+  margin: 15px 0;
 }
 
-.SelectCorrectAnswer button {
+.InputCorrectAnswer > div > button {
+  font-size: 30px;
+}
+
+.SelectCorrectAnswerScoringEnd {
   margin: 10px;
   width: 100px;
   float: right;

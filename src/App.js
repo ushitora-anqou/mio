@@ -15,9 +15,13 @@ import SceneView from './SceneView'
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { library } from '@fortawesome/fontawesome-svg-core'
-import { faCircle } from '@fortawesome/free-regular-svg-icons'
+import {
+  faCircle,
+  faPlayCircle,
+  faStopCircle
+} from '@fortawesome/free-regular-svg-icons'
 import { faTimes } from '@fortawesome/free-solid-svg-icons'
-library.add(faCircle, faTimes)
+library.add(faCircle, faTimes, faPlayCircle, faStopCircle)
 
 function newSocket () {
   return io(config.server_uri)
