@@ -104,11 +104,16 @@
 .PlayAndAnswer > button {
   width: 70%;
   height: 100px;
+  font-size: 50px;
 }
 
 .ShowResultEntries {
   display: table;
   border: 1px solid #ccc;
+}
+
+.ShowResultEntries > div {
+  display: table-row;
 }
 
 .ShowResultEntries .CorrectRow {
@@ -142,12 +147,13 @@
 }
 
 .ShowResultEntriesColumnAnswer {
-  width: 240px;
+  width: 280px;
   padding: 10px;
 }
 
 .ShowResultEntriesColumnCheck {
   width: 20px;
+  text-align: center;
 }
 
 .InputCorrectAnswer > div {
