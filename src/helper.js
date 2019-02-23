@@ -1,4 +1,5 @@
 import React from 'react'
+import { config } from './config'
 
 export function isEmpty (obj) {
   return Object.keys(obj).length === 0
@@ -12,7 +13,7 @@ export const QuizRoomContext = React.createContext()
 
 export function roomStorage (roomid) {
   return {
-    getItem: key => sessionStorage.getItem(roomid + key),
-    setItem: (key, value) => sessionStorage.setItem(roomid + key, value)
+    getItem: key => config.storage.getItem(roomid + key),
+    setItem: (key, value) => config.storage.setItem(roomid + key, value)
   }
 }

@@ -148,7 +148,7 @@ class QuizRoom extends Component {
 
   render () {
     if (this.state.established === false) {
-      return <Route component={RoomNotFound} />
+      return <Route component={AuthFailed} />
     }
 
     return (
@@ -244,6 +244,21 @@ const RoomNotFound = ({ location }) => (
     <p>
       <Link to='/create-room'>
         ここから部屋を作って新しいゲームを始めて下しあ。
+      </Link>
+    </p>
+  </div>
+)
+
+const AuthFailed = ({ location }) => (
+  <div>
+    <h2>入室に失敗しました</h2>
+    <p>
+      この部屋が削除されたか、もしくは他のタブで既に入室しているなどの理由により、
+      入室に失敗しました。ゆるして
+    </p>
+    <p>
+      <Link to='/create-room'>
+        新しい部屋を作成する場合はここを押して下しあ。
       </Link>
     </p>
   </div>
