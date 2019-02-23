@@ -9,7 +9,7 @@ import {
 import io from 'socket.io-client'
 import './App.css'
 import { config } from './config'
-import { isPrintable, QuizRoomContext } from './helper'
+import { isPrintable, QuizRoomContext, roomStorage } from './helper'
 import ChatWindow from './ChatWindow'
 import SceneView from './SceneView'
 
@@ -22,6 +22,15 @@ import {
 } from '@fortawesome/free-regular-svg-icons'
 import { faTimes } from '@fortawesome/free-solid-svg-icons'
 library.add(faCircle, faTimes, faPlayCircle, faStopCircle)
+
+function parseJSON (src) {
+  try {
+    return JSON.parse(src)
+  } catch (err) {
+    if (err instanceof 'SyntaxError') return null
+    else throw err
+  }
+}
 
 function newSocket () {
   return io(config.server_uri)
@@ -94,6 +103,15 @@ class QuizRoom extends Component {
     this.socket.on('auth-result', this.onAuthResult)
     this.socket.on('quiz-info', this.onQuizInfo)
     this.socket.on('users', this.onUsers)
+
+    roomStorage(this.roomid).setItem(
+      'auth',
+      JSON.stringify({
+        uid: this.uid,
+        master: this.master,
+        password: this.password
+      })
+    )
   }
 
   componentWillUnmount () {
@@ -138,11 +156,7 @@ class QuizRoom extends Component {
         value={{
           established: this.state.established,
           numOfOnlineUsers: this.state.users.filter(user => user.online).length,
-          sessionStorage: {
-            getItem: key => sessionStorage.getItem(this.roomid + key),
-            setItem: (key, value) =>
-              sessionStorage.setItem(this.roomid + key, value)
-          }
+          sessionStorage: roomStorage(this.roomid)
         }}
       >
         <div className='QuizRoom'>
@@ -235,12 +249,22 @@ const RoomNotFound = ({ location }) => (
   </div>
 )
 
-const Room = ({ match, location }) =>
-  location.state ? (
-    <QuizRoom roomid={match.params.roomid} {...location.state} />
+const Room = ({ match, location }) => {
+  const roomid = match.params.roomid
+  const props = location.state
+    ? {
+        master: location.state.master,
+        uid: location.state.uid,
+        password: location.state.password
+      }
+    : parseJSON(roomStorage(roomid).getItem('auth'))
+
+  return props ? (
+    <QuizRoom roomid={roomid} {...props} />
   ) : (
-    <IssueAccount roomid={match.params.roomid} />
+    <IssueAccount roomid={roomid} />
   )
+}
 
 class IssueAccount extends Component {
   constructor (props) {

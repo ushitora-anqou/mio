@@ -9,3 +9,10 @@ export function isPrintable (str) {
 }
 
 export const QuizRoomContext = React.createContext()
+
+export function roomStorage (roomid) {
+  return {
+    getItem: key => sessionStorage.getItem(roomid + key),
+    setItem: (key, value) => sessionStorage.setItem(roomid + key, value)
+  }
+}
