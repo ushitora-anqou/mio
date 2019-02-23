@@ -119,8 +119,23 @@ class SelectMusic extends Component {
     }
   }
 
+  componentDidMount () {
+    this.setState({
+      randomPlay: sessionStorage.getItem('checkRandomPlay') === 'enabled',
+      randomSelect: sessionStorage.getItem('checkRandomSelect') === 'enabled'
+    })
+  }
+
   componentWillUnmount () {
     if (this.timerID) clearInterval(this.timerID)
+    sessionStorage.setItem(
+      'checkRandomPlay',
+      this.state.randomPlay ? 'enabled' : 'disabled'
+    )
+    sessionStorage.setItem(
+      'checkRandomSelect',
+      this.state.randomSelect ? 'enabled' : 'disabled'
+    )
   }
 
   render () {
