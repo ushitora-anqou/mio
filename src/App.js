@@ -27,45 +27,23 @@ function newSocket () {
   return io(config.server_uri)
 }
 
-class UserList extends Component {
-  constructor (props) {
-    super(props)
-
-    this.state = {
-      users: []
-    }
-  }
-
-  componentDidMount () {
-    this.props.socket.on('users', this.onUsers)
-  }
-
-  componentWillUnmount () {
-    this.props.socket.off('users', this.onUsers)
-  }
-
-  onUsers = users => {
-    this.setState({ users })
-  }
-
-  render () {
-    const myUser = this.state.users.find(user => user.uid === this.props.myUid)
-    return (
-      <div className='UserList'>
-        {myUser && (
-          <UserListEntry
-            key={myUser.uid}
-            user={myUser}
-            className='UserListEntryMe'
-          />
-        )}
-        {this.state.users.map(user => {
-          if (user.uid === this.props.myUid) return null
-          return <UserListEntry key={user.uid} user={user} />
-        })}
-      </div>
-    )
-  }
+function UserList (props) {
+  const myUser = props.users.find(user => user.uid === props.myUid)
+  return (
+    <div className='UserList'>
+      {myUser && (
+        <UserListEntry
+          key={myUser.uid}
+          user={myUser}
+          className='UserListEntryMe'
+        />
+      )}
+      {props.users.map(user => {
+        if (user.uid === props.myUid) return null
+        return <UserListEntry key={user.uid} user={user} />
+      })}
+    </div>
+  )
 }
 
 function UserListEntry (props) {
@@ -99,7 +77,8 @@ class QuizRoom extends Component {
       shouldWaitForReset: false,
       didAuth: false,
       established: null, // connecting
-      round: null
+      round: null,
+      users: []
     }
     this.roomid = props.roomid
 
@@ -114,6 +93,7 @@ class QuizRoom extends Component {
     this.socket.on('auth', this.onAuth)
     this.socket.on('auth-result', this.onAuthResult)
     this.socket.on('quiz-info', this.onQuizInfo)
+    this.socket.on('users', this.onUsers)
   }
 
   componentWillUnmount () {
@@ -121,6 +101,7 @@ class QuizRoom extends Component {
     this.socket.off('auth', this.onAuth)
     this.socket.off('auth-result', this.onAuthResult)
     this.socket.off('quiz-info', this.onQuizInfo)
+    this.socket.off('users', this.onUsers)
   }
 
   onDisconnect = () => {
@@ -143,6 +124,10 @@ class QuizRoom extends Component {
     this.setState({ round })
   }
 
+  onUsers = users => {
+    this.setState({ users })
+  }
+
   render () {
     if (this.state.established === false) {
       return <Route component={RoomNotFound} />
@@ -151,7 +136,8 @@ class QuizRoom extends Component {
     return (
       <SocketContext.Provider
         value={{
-          established: this.state.established
+          established: this.state.established,
+          numOfOnlineUsers: this.state.users.filter(user => user.online).length
         }}
       >
         <div className='QuizRoom'>
@@ -166,7 +152,7 @@ class QuizRoom extends Component {
           <div>
             <ConnectionStatus />
             <QuizStatus round={this.state.round} />
-            <UserList socket={this.socket} myUid={this.uid} />
+            <UserList users={this.state.users} myUid={this.uid} />
             <ChatWindow socket={this.socket} />
           </div>
         </div>

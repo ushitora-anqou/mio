@@ -185,7 +185,8 @@ class SelectMusic extends Component {
                   this.state.sending ||
                   !this.context.established ||
                   (!this.state.randomSelect && !this.state.selectedFile) ||
-                  this.props.files.length === 0
+                  this.props.files.length === 0 ||
+                  this.context.numOfOnlineUsers <= 1
                 }
               >
                 出題
