@@ -9,7 +9,7 @@ import {
 import io from 'socket.io-client'
 import './App.css'
 import { config } from './config'
-import { isPrintable, SocketContext } from './helper'
+import { isPrintable, QuizRoomContext } from './helper'
 import ChatWindow from './ChatWindow'
 import SceneView from './SceneView'
 
@@ -134,17 +134,21 @@ class QuizRoom extends Component {
     }
 
     return (
-      <SocketContext.Provider
+      <QuizRoomContext.Provider
         value={{
           established: this.state.established,
-          numOfOnlineUsers: this.state.users.filter(user => user.online).length
+          numOfOnlineUsers: this.state.users.filter(user => user.online).length,
+          sessionStorage: {
+            getItem: key => sessionStorage.getItem(this.roomid + key),
+            setItem: (key, value) =>
+              sessionStorage.setItem(this.roomid + key, value)
+          }
         }}
       >
         <div className='QuizRoom'>
           <SceneView
             master={this.master}
             socket={this.socket}
-            roomid={this.roomid}
             didAuth={this.state.didAuth}
             waitForReset={this.state.shouldWaitForReset}
             onProcessForAuth={this.handleProcessForAuth}
@@ -156,7 +160,7 @@ class QuizRoom extends Component {
             <ChatWindow socket={this.socket} />
           </div>
         </div>
-      </SocketContext.Provider>
+      </QuizRoomContext.Provider>
     )
   }
 
@@ -166,7 +170,7 @@ class QuizRoom extends Component {
 }
 
 class ConnectionStatus extends Component {
-  static contextType = SocketContext
+  static contextType = QuizRoomContext
   render () {
     return (
       <div className='ConnectionStatus'>

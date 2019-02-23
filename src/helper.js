@@ -8,4 +8,4 @@ export function isPrintable (str) {
   return !/^[ \t\n　]*$/.test(str)
 }
 
-export const SocketContext = React.createContext()
+export const QuizRoomContext = React.createContext()

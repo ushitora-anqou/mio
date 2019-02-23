@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import update from 'immutability-helper'
 import './SceneView.css'
-import { isEmpty, isPrintable, SocketContext } from './helper'
+import { isEmpty, isPrintable, QuizRoomContext } from './helper'
 
 const lamejs = require('lamejs')
 const AudioContext = window.AudioContext || window.webkitAudioContext
@@ -52,7 +52,7 @@ async function trimMusic (encodedBuf, channels, sampleRate, kbps, calcPos) {
 }
 
 class SelectMusic extends Component {
-  static contextType = SocketContext
+  static contextType = QuizRoomContext
 
   constructor (props) {
     super(props)
@@ -121,18 +121,20 @@ class SelectMusic extends Component {
 
   componentDidMount () {
     this.setState({
-      randomPlay: sessionStorage.getItem('checkRandomPlay') === 'enabled',
-      randomSelect: sessionStorage.getItem('checkRandomSelect') === 'enabled'
+      randomPlay:
+        this.context.sessionStorage.getItem('checkRandomPlay') === 'enabled',
+      randomSelect:
+        this.context.sessionStorage.getItem('checkRandomSelect') === 'enabled'
     })
   }
 
   componentWillUnmount () {
     if (this.timerID) clearInterval(this.timerID)
-    sessionStorage.setItem(
+    this.context.sessionStorage.setItem(
       'checkRandomPlay',
       this.state.randomPlay ? 'enabled' : 'disabled'
     )
-    sessionStorage.setItem(
+    this.context.sessionStorage.setItem(
       'checkRandomSelect',
       this.state.randomSelect ? 'enabled' : 'disabled'
     )
@@ -394,7 +396,7 @@ function MusicPlayingButton (props) {
 }
 
 class InputAnswer extends Component {
-  static contextType = SocketContext
+  static contextType = QuizRoomContext
 
   constructor (props) {
     super(props)
@@ -432,7 +434,7 @@ class InputAnswer extends Component {
 }
 
 class SelectCorrectAnswer extends Component {
-  static contextType = SocketContext
+  static contextType = QuizRoomContext
 
   constructor (props) {
     super(props)
@@ -576,7 +578,7 @@ function ShowResultEntries (props) {
 }
 
 class ShowResult extends Component {
-  static contextType = SocketContext
+  static contextType = QuizRoomContext
 
   constructor (props) {
     super(props)
