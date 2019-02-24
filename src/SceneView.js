@@ -413,9 +413,14 @@ class InputAnswer extends Component {
     this.setState({ sending: true })
   }
 
+  handleThrough = () => {
+    this.props.onSubmit(null)
+    this.setState({ sending: true })
+  }
+
   render () {
     return (
-      <>
+      <div className='InputAnswer'>
         <form onSubmit={this.handleSubmit}>
           <label>
             答え：
@@ -428,7 +433,13 @@ class InputAnswer extends Component {
             送信
           </button>
         </form>
-      </>
+        <button
+          disabled={this.state.sending || !this.context.established}
+          onClick={this.handleThrough}
+        >
+          スルー
+        </button>
+      </div>
     )
   }
 }
@@ -457,7 +468,9 @@ class SelectCorrectAnswer extends Component {
     const canSendResult = () => {
       return (
         isPrintable(answer) &&
-        Object.keys(answers).every(uid => answers[uid].hasOwnProperty('judge'))
+        Object.keys(answers).every(
+          uid => !answers[uid].answer || answers[uid].hasOwnProperty('judge')
+        )
       )
     }
 
@@ -540,34 +553,36 @@ function ShowResultEntries (props) {
               {entry.time.toFixed(4)}
             </div>
             <div className='ShowResultEntriesColumn ShowResultEntriesColumnAnswer'>
-              {entry.answer}
+              {entry.answer ? entry.answer : '（スルー）'}
             </div>
             {props.judging && (
               <div className='ShowResultEntriesColumn'>
-                <div className='ShowResultEntriesColumnCheck'>
-                  <label>
-                    <input
-                      type='radio'
-                      name={entry.uid}
-                      checked={entry.judge === true}
-                      onChange={e => {
-                        return props.onClickOk(entry.uid)
-                      }}
-                    />
-                    <FontAwesomeIcon icon={['far', 'circle']} />
-                  </label>
-                  <label>
-                    <input
-                      type='radio'
-                      name={entry.uid}
-                      checked={entry.judge === false}
-                      onChange={e => {
-                        return props.onClickNg(entry.uid)
-                      }}
-                    />
-                    <FontAwesomeIcon icon='times' />
-                  </label>
-                </div>
+                {entry.answer && (
+                  <div className='ShowResultEntriesColumnCheck'>
+                    <label>
+                      <input
+                        type='radio'
+                        name={entry.uid}
+                        checked={entry.judge === true}
+                        onChange={e => {
+                          return props.onClickOk(entry.uid)
+                        }}
+                      />
+                      <FontAwesomeIcon icon={['far', 'circle']} />
+                    </label>
+                    <label>
+                      <input
+                        type='radio'
+                        name={entry.uid}
+                        checked={entry.judge === false}
+                        onChange={e => {
+                          return props.onClickNg(entry.uid)
+                        }}
+                      />
+                      <FontAwesomeIcon icon='times' />
+                    </label>
+                  </div>
+                )}
               </div>
             )}
           </div>

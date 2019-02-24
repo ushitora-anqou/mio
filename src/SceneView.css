@@ -107,6 +107,13 @@
   font-size: 50px;
 }
 
+.InputAnswer > button {
+  display: block;
+  width: 150px;
+  height: 30px;
+  margin: 50px auto;
+}
+
 .ShowResultEntries {
   display: table;
   border: 1px solid #ccc;

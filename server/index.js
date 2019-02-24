@@ -55,7 +55,7 @@ schema.quizMusic = {
 }
 schema.quizAnswer = {
   msg: {
-    answer: Joi.string().required(),
+    answer: Joi.string().allow(null),
     time: schema.time.required()
   },
   done: Joi.func().required()
@@ -71,8 +71,12 @@ schema.quizResultAnswer = {
   uid: schema.uid.required(),
   name: schema.name.required(),
   time: schema.time.required(),
-  answer: Joi.string().required(),
-  judge: Joi.boolean().required()
+  answer: Joi.any().when('judge', {
+    is: Joi.exist(),
+    then: Joi.string().required(),
+    otherwise: Joi.valid(null)
+  }),
+  judge: Joi.boolean()
 }
 schema.quizReset = {
   msg: {
@@ -292,7 +296,7 @@ async function main () {
           return
         }
 
-        log('quiz-answer: ' + msg.answer)
+        log('quiz-answer: ' + (msg.answer ? msg.answer : 'THROUGH'))
 
         io.to(master).emit('quiz-answer', {
           uid: uid,

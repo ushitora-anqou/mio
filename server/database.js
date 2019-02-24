@@ -182,6 +182,7 @@ async function newSequelizeDatabase (url, options) {
     }
 
     async updateScore (uid, correct) {
+      if (correct === undefined || correct === null) return
       const user = await this._getUser(uid)
       return user.increment(correct ? 'maru' : 'peke')
     }
