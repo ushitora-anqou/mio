@@ -4,7 +4,6 @@ const http = require('http')
 const path = require('path')
 
 const dev = {
-  redisUrl: '127.0.0.1:6379',
   port: 4000,
   createSocketIOServer: function () {
     const server = http.createServer()
@@ -22,7 +21,6 @@ const test = {
 }
 
 const prod = {
-  redisUrl: process.env.REDIS_URL,
   port: process.env.PORT,
   static: path.resolve('build'),
   createSocketIOServer: function () {

@@ -45,11 +45,12 @@ function UserList (props) {
           key={myUser.uid}
           user={myUser}
           className='UserListEntryMe'
+          point={props.point}
         />
       )}
       {props.users.map(user => {
         if (user.uid === props.myUid) return null
-        return <UserListEntry key={user.uid} user={user} />
+        return <UserListEntry key={user.uid} user={user} point={props.point} />
       })}
     </div>
   )
@@ -74,6 +75,11 @@ function UserListEntry (props) {
           <FontAwesomeIcon icon='times' />
         </span>
       )}
+      {!user.master && props.point && (
+        <span className='UserListEntryScore'>
+          {user.maru * props.point.correct + user.peke * props.point.wrong}
+        </span>
+      )}
     </div>
   )
 }
@@ -87,6 +93,7 @@ class QuizRoom extends Component {
       didAuth: false,
       established: null, // connecting
       round: null,
+      point: null,
       users: []
     }
     this.roomid = props.roomid
@@ -138,8 +145,11 @@ class QuizRoom extends Component {
     })
   }
 
-  onQuizInfo = ({ round }) => {
-    this.setState({ round })
+  onQuizInfo = ({ round, correctPoint, wrongPoint }) => {
+    this.setState({
+      round,
+      point: { correct: correctPoint, wrong: wrongPoint }
+    })
   }
 
   onUsers = users => {
@@ -170,7 +180,11 @@ class QuizRoom extends Component {
           <div>
             <ConnectionStatus />
             <QuizStatus round={this.state.round} />
-            <UserList users={this.state.users} myUid={this.uid} />
+            <UserList
+              users={this.state.users}
+              myUid={this.uid}
+              point={this.state.point}
+            />
             <ChatWindow socket={this.socket} />
           </div>
         </div>
@@ -372,6 +386,8 @@ class CreateRoom extends Component {
     }
 
     this.inputName = React.createRef()
+    this.inputCorrectPoint = React.createRef()
+    this.inputWrongPoint = React.createRef()
     this.socket = newSocket()
   }
 
@@ -384,7 +400,11 @@ class CreateRoom extends Component {
 
     this.socket.emit(
       'create-room',
-      { masterName: this.inputName.current.value },
+      {
+        masterName: this.inputName.current.value,
+        correctPoint: this.inputCorrectPoint.current.value,
+        wrongPoint: this.inputWrongPoint.current.value
+      },
       (uid, password, roomid) => {
         this.uid = uid
         this.password = password
@@ -411,12 +431,20 @@ class CreateRoom extends Component {
       <div className='CreateRoom'>
         <h2>あたらしい部屋を作成する</h2>
         <form onSubmit={this.onSubmit}>
+          <label>あなたの名前：</label>
+          <input type='text' ref={this.inputName} />
           <label>
-            あなたの名前：
-            <input type='text' ref={this.inputName} />
+            <FontAwesomeIcon icon={['far', 'circle']} />
+            正答に与える得点：
           </label>
+          <input type='number' ref={this.inputCorrectPoint} />
+          <label>
+            <FontAwesomeIcon icon='times' />
+            誤答に与える得点：
+          </label>
+          <input type='number' ref={this.inputWrongPoint} />
           <button type='submit' disabled={this.state.sending}>
-            Submit
+            送信
           </button>
         </form>
       </div>

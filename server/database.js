@@ -61,6 +61,14 @@ async function newSequelizeDatabase (url, options) {
       type: Sequelize.INTEGER,
       allowNull: false,
       defaultValue: 1
+    },
+    correctPoint: {
+      type: Sequelize.INTEGER,
+      allowNull: false
+    },
+    wrongPoint: {
+      type: Sequelize.INTEGER,
+      allowNull: false
     }
   })
 
@@ -73,13 +81,29 @@ async function newSequelizeDatabase (url, options) {
     }
 
     async createRoom (masterSrc, initialStage) {
-      const room = await Room.create({ stage: initialStage })
+      const room = await Room.create({
+        stage: initialStage,
+        correctPoint: masterSrc.correctPoint,
+        wrongPoint: masterSrc.wrongPoint
+      })
       const master = await room.createUser({
         name: masterSrc.name,
         handshake: masterSrc.handshake
       })
       await room.setMaster(master)
       return { uid: master.id, password: master.password, roomid: room.id }
+    }
+
+    async getRoom (roomid) {
+      const room = await Room.findOne({ where: { id: roomid } })
+      if (!room) return null
+      return {
+        roomid,
+        stage: room.stage,
+        round: room.round,
+        correctPoint: room.correctPoint,
+        wrongPoint: room.wrongPoint
+      }
     }
 
     async checkRoomStage (roomid, stage) {

@@ -24,7 +24,13 @@ schema.roomExists = {
 }
 schema.createRoom = {
   param: {
-    masterName: schema.name.required()
+    masterName: schema.name.required(),
+    correctPoint: Joi.number()
+      .integer()
+      .required(),
+    wrongPoint: Joi.number()
+      .integer()
+      .required()
   },
   done: Joi.func().required()
 }
@@ -144,7 +150,12 @@ async function main () {
       }
 
       const { uid, password, roomid } = await db.createRoom(
-        { name: param.masterName, handshake },
+        {
+          name: param.masterName,
+          handshake,
+          correctPoint: param.correctPoint,
+          wrongPoint: param.wrongPoint
+        },
         STAGE.WAITING_QUIZ_MUSIC
       )
       glog(`Create a room: ${roomid}`)
@@ -210,11 +221,14 @@ async function main () {
       }
 
       const sendQuizInfo = async () => {
-        const round = await db.getRound(roomid)
+        const room = await db.getRoom(roomid)
         io.to(roomid).emit('quiz-info', {
-          round: (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC))
-            ? round
-            : round - 1
+          round:
+            room.stage === STAGE.WAITING_QUIZ_MUSIC
+              ? room.round
+              : room.round - 1,
+          correctPoint: room.correctPoint,
+          wrongPoint: room.wrongPoint
         })
       }
 
