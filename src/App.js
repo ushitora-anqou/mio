@@ -7,6 +7,7 @@ import {
   Redirect
 } from 'react-router-dom'
 import io from 'socket.io-client'
+import update from 'immutability-helper'
 import './App.css'
 import { config } from './config'
 import { isPrintable, QuizRoomContext, roomStorage } from './helper'
@@ -32,8 +33,25 @@ function parseJSON (src) {
   }
 }
 
+function reversed (ary) {
+  return ary.slice().reverse()
+}
+
 function newSocket () {
   return io(config.server_uri)
+}
+
+function QuizHistory (props) {
+  return (
+    <div className='QuizHistory'>
+      {reversed(props.history).map(({ round, answer }) => (
+        <div key={round}>
+          <span className='QuizHistoryEntryRound'>Round {round}</span>
+          <span className='QuizHistoryEntryAnswer'>{answer}</span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function UserList (props) {
@@ -94,7 +112,8 @@ class QuizRoom extends Component {
       established: null, // connecting
       round: null,
       point: null,
-      users: []
+      users: [],
+      quizHistory: []
     }
     this.roomid = props.roomid
 
@@ -176,10 +195,12 @@ class QuizRoom extends Component {
             didAuth={this.state.didAuth}
             waitForReset={this.state.shouldWaitForReset}
             onProcessForAuth={this.handleProcessForAuth}
+            onQuizReset={this.handleQuizReset}
           />
           <div>
             <ConnectionStatus />
             <QuizStatus round={this.state.round} />
+            <QuizHistory history={this.state.quizHistory} />
             <UserList
               users={this.state.users}
               myUid={this.uid}
@@ -194,6 +215,14 @@ class QuizRoom extends Component {
 
   handleProcessForAuth = () => {
     this.setState({ didAuth: false, shouldWaitForReset: false })
+  }
+
+  handleQuizReset = correctAnswer => {
+    this.setState((state, props) => ({
+      quizHistory: update(state.quizHistory, {
+        $push: [{ round: this.state.round, answer: correctAnswer }]
+      })
+    }))
   }
 }
 
@@ -395,6 +424,9 @@ class CreateRoom extends Component {
     e.preventDefault()
 
     if (!isPrintable(this.inputName.current.value)) return
+    const correctPoint = Number(this.inputCorrectPoint.current.value)
+    const wrongPoint = Number(this.inputWrongPoint.current.value)
+    if (!correctPoint || !wrongPoint) return
 
     this.setState({ sending: true })
 
@@ -402,8 +434,8 @@ class CreateRoom extends Component {
       'create-room',
       {
         masterName: this.inputName.current.value,
-        correctPoint: this.inputCorrectPoint.current.value,
-        wrongPoint: this.inputWrongPoint.current.value
+        correctPoint,
+        wrongPoint
       },
       (uid, password, roomid) => {
         this.uid = uid

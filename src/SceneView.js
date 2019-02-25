@@ -839,6 +839,7 @@ class SceneView extends Component {
   }
 
   handleResetResult = () => {
+    this.props.onQuizReset(this.state.scene.answer)
     this._emitAndChangeScene('quiz-reset', {}, this.SCENE.WAIT_MUSIC)
   }
 
@@ -888,6 +889,9 @@ class SceneView extends Component {
   }
 
   onQuizReset = msg => {
+    if (this._checkScene(this.SCENE.SHOW_RESULT) && this.state.scene.answer)
+      this.props.onQuizReset(this.state.scene.answer)
+
     this._changeScene(this.SCENE.WAIT_MUSIC)
     if (msg.hasOwnProperty('message')) this.setState({ message: msg.message })
   }
