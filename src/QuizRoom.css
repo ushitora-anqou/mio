@@ -110,3 +110,11 @@
   height: 100%;
   overflow: hidden;
 }
+
+.ScoreEditor form {
+  width: 400px;
+  margin: 10px;
+  display: grid;
+  grid-template-columns: 200px 60px 60px 80px;
+  grid-template-rows: 30px;
+}

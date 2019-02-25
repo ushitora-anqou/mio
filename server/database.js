@@ -224,6 +224,10 @@ async function newSequelizeDatabase (url, options) {
     async getRound (roomid) {
       return (await this._getRoom(roomid)).round
     }
+
+    updateUser (uid, src) {
+      return User.update(src, { where: { id: uid } })
+    }
   }
 
   await User.sync()

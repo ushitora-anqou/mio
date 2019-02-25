@@ -96,6 +96,18 @@ schema.quizReset = {
   },
   done: Joi.func().required()
 }
+schema.changeScore = {
+  msg: {
+    uid: schema.uid,
+    maru: Joi.number()
+      .min(-2147483648)
+      .max(2147483647),
+    peke: Joi.number()
+      .min(-2147483648)
+      .max(2147483647)
+  },
+  done: Joi.func().required()
+}
 
 function validate (value, schema) {
   if (!value) {
@@ -249,6 +261,8 @@ async function main () {
         })
       }
 
+      const isMaster = (await db.getRoomMasterUid(roomid)) === uid
+
       socket.join(roomid)
       await db.setSid(uid, socket.id)
       log('auth')
@@ -372,6 +386,21 @@ async function main () {
 
         sendQuizInfo()
         socket.to(roomid).emit('quiz-reset', { message: msg.message })
+
+        done()
+      })
+
+      socket.on('change-score', async (msg, done) => {
+        if (!(!validate({ msg, done }, schema.changeScore) && isMaster)) {
+          log('change-score failed')
+          return
+        }
+
+        log('change-score')
+
+        await db.updateUser(msg.uid, { maru: msg.maru, peke: msg.peke })
+
+        sendUserList()
 
         done()
       })

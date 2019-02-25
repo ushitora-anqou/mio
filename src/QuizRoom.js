@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import { Route, Link } from 'react-router-dom'
 import update from 'immutability-helper'
 import './QuizRoom.css'
-import { QuizRoomContext, roomStorage, newSocket } from './helper'
+import { QuizRoomContext, isPrintable, roomStorage, newSocket } from './helper'
 import ChatWindow from './ChatWindow'
 import SceneView from './SceneView'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -115,6 +115,9 @@ class QuizRoom extends Component {
               myUid={this.uid}
               point={this.state.point}
             />
+            {this.master && (
+              <ScoreEditor socket={this.socket} users={this.state.users} />
+            )}
             <ChatWindow socket={this.socket} />
           </div>
         </div>
@@ -213,6 +216,52 @@ function QuizStatus (props) {
   return (
     <div className='QuizStatus'>
       <p>Round {props.round}</p>
+    </div>
+  )
+}
+
+function ScoreEditor (props) {
+  const [sending, setSending] = React.useState(false)
+  const selectUser = React.useRef(null)
+  const inputCorrect = React.useRef(null)
+  const inputWrong = React.useRef(null)
+
+  const handleSubmit = React.useCallback(e => {
+    e.preventDefault()
+
+    const uid = selectUser.current.value
+    // treat blank value as 0
+    const maru = Number(inputCorrect.current.value)
+    const peke = Number(inputWrong.current.value)
+    if (!isPrintable(uid)) return
+
+    setSending(true)
+
+    props.socket.emit('change-score', { uid, maru, peke }, () => {
+      // clear
+      selectUser.current.value = ''
+      inputCorrect.current.value = ''
+      inputWrong.current.value = ''
+      setSending(false)
+    })
+  }, [])
+
+  return (
+    <div className='ScoreEditor'>
+      <form onSubmit={handleSubmit}>
+        <select ref={selectUser}>
+          {props.users.map(user =>
+            user.master ? null : (
+              <option key={user.uid} value={user.uid}>
+                {user.name}
+              </option>
+            )
+          )}
+        </select>
+        <input type='number' ref={inputCorrect} placeholder='○' />
+        <input type='number' ref={inputWrong} placeholder='×' />
+        <button disabled={sending}>得点変更</button>
+      </form>
     </div>
   )
 }
