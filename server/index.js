@@ -270,7 +270,7 @@ async function main () {
       // If the master refresh the page, reset the game.
       // TODO: stable page refreshing
       if (
-        (await db.getRoomMasterUid(roomid)) === uid &&
+        isMaster &&
         !(await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC))
       ) {
         await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
@@ -299,7 +299,7 @@ async function main () {
           !(
             !validate({ msg, done }, schema.quizMusic) &&
             (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)) &&
-            (await db.getRoomMasterUid(roomid)) === uid
+            isMaster
           )
         ) {
           log('quiz-music failed')
@@ -323,7 +323,8 @@ async function main () {
           !(
             !validate({ msg, done }, schema.quizAnswer) &&
             (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) &&
-            master !== undefined
+            master !== undefined &&
+            !isMaster
           )
         ) {
           log('quiz-answer failed')
@@ -351,7 +352,8 @@ async function main () {
                 !validate(uid, schema.uid) &&
                 !validate(msg.answers[uid], schema.quizResultAnswer)
             ) &&
-            (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER))
+            (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) &&
+            isMaster
           )
         ) {
           log('quiz-result failed')
@@ -370,12 +372,7 @@ async function main () {
       })
 
       socket.on('quiz-reset', async (msg, done) => {
-        if (
-          !(
-            !validate({ msg, done }, schema.quizReset) &&
-            (await db.getSid(await db.getRoomMasterUid(roomid))) !== undefined
-          )
-        ) {
+        if (!(!validate({ msg, done }, schema.quizReset) && isMaster)) {
           log('quiz-reset failed')
           return
         }
