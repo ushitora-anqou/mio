@@ -16,6 +16,8 @@ schema.roomid = Joi.string().uuid('uuidv4')
 schema.uid = Joi.string().uuid('uuidv4')
 schema.password = Joi.string().uuid('uuidv4')
 schema.time = Joi.number()
+  .min(0)
+  .max(15)
 schema.roomExists = {
   msg: {
     roomid: schema.roomid.required()
@@ -27,9 +29,13 @@ schema.createRoom = {
     masterName: schema.name.required(),
     correctPoint: Joi.number()
       .integer()
+      .min(-128)
+      .max(127)
       .required(),
     wrongPoint: Joi.number()
       .integer()
+      .min(-128)
+      .max(127)
       .required()
   },
   done: Joi.func().required()
@@ -97,7 +103,7 @@ function validate (value, schema) {
     return false
   }
 
-  const result = Joi.validate(value, schema)
+  const result = Joi.validate(value, schema, { convert: false })
   if (result.error) console_log(`validation failed: ${result.error}`)
   return !!result.error
 }
