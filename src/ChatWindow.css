@@ -14,7 +14,7 @@
 }
 
 .ChatHistory {
-  height: 500px;
+  height: 450px;
   overflow-y: scroll;
   border: 1px solid #ccc;
 }
