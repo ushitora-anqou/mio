@@ -7,7 +7,7 @@ import {
   Redirect
 } from 'react-router-dom'
 import './App.css'
-import { isPrintable, roomStorage, newSocket } from './helper'
+import { isPrintable, roomStorage, newSocket, audioMan } from './helper'
 import QuizRoom from './QuizRoom'
 
 // prepare font-awesome icons
@@ -39,6 +39,7 @@ class IssueAccount extends Component {
 
   handleSubmit = e => {
     e.preventDefault()
+    audioMan.resetContext()
 
     if (!isPrintable(this.inputName.current.value)) return
 
@@ -119,6 +120,7 @@ class CreateRoom extends Component {
 
   onSubmit = e => {
     e.preventDefault()
+    audioMan.resetContext()
 
     if (!isPrintable(this.inputName.current.value)) return
     const correctPoint = Number(this.inputCorrectPoint.current.value)

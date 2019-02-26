@@ -22,3 +22,36 @@ export function roomStorage (roomid) {
 export function newSocket () {
   return io(config.server_uri)
 }
+
+class AudioManager {
+  constructor () {
+    this.audioCtx = null
+  }
+
+  resetContext () {
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+    this.audioCtx = new AudioContext()
+  }
+
+  decodeAudioData (buf) {
+    return this.audioCtx.decodeAudioData(buf)
+  }
+
+  getCurrentTime () {
+    return this.audioCtx.currentTime
+  }
+
+  getContext () {
+    return this.audioCtx
+  }
+
+  playMusic (buf, options = {}) {
+    const source = this.audioCtx.createBufferSource()
+    source.buffer = buf
+    source.connect(this.audioCtx.destination)
+    source.onended = options.onended
+    source.start(options.when, options.offset, options.duration)
+    return source
+  }
+}
+export const audioMan = new AudioManager()

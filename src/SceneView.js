@@ -2,10 +2,9 @@ import React, { Component } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import update from 'immutability-helper'
 import './SceneView.css'
-import { isEmpty, isPrintable, QuizRoomContext } from './helper'
+import { isEmpty, isPrintable, QuizRoomContext, audioMan } from './helper'
 
 const lamejs = require('lamejs')
-const AudioContext = window.AudioContext || window.webkitAudioContext
 
 // thanks to https://simon-schraeder.de/posts/filereader-async/
 function readFileAsync (file) {
@@ -379,6 +378,42 @@ class PlayMusic extends Component {
   }
 }
 
+function MusicPlayerButton (props) {
+  const [music, setMusic] = React.useState(null)
+  const [source, setSource] = React.useState(null)
+  const [playing, setPlaying] = React.useState(false)
+  const handleClickStart = React.useCallback(() => {
+    setPlaying(true)
+    setSource(audioMan.playMusic(music))
+  }, [music])
+  const handleClickStop = React.useCallback(() => {
+    source.stop()
+    setPlaying(false)
+    setSource(null)
+  }, [source])
+
+  audioMan
+    .decodeAudioData(props.music)
+    .then(buf => setMusic(buf))
+    .catch(err => {
+      if (props.onFailToLoad) props.onFailToLoad()
+    })
+
+  return (
+    <>
+      {playing ? (
+        <button onClick={handleClickStop}>
+          <FontAwesomeIcon icon={['far', 'stop-circle']} />
+        </button>
+      ) : (
+        <button onClick={handleClickStart} disabled={music ? false : true}>
+          <FontAwesomeIcon icon={['far', 'play-circle']} />
+        </button>
+      )}
+    </>
+  )
+}
+
 function MusicPlayingButton (props) {
   return (
     <>
@@ -480,7 +515,7 @@ class SelectCorrectAnswer extends Component {
         <div className='InputCorrectAnswer'>
           <h3>正答</h3>
           <div>
-            <PlayMusic music={this.props.music} />
+            <MusicPlayerButton music={this.props.music} />
             <InputCorrectAnswer
               answer={answer}
               onChange={this.handleAnswerChange}
