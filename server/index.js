@@ -15,9 +15,7 @@ schema.name = Joi.string().max(128)
 schema.roomid = Joi.string().uuid('uuidv4')
 schema.uid = Joi.string().uuid('uuidv4')
 schema.password = Joi.string().uuid('uuidv4')
-schema.time = Joi.number()
-  .min(0)
-  .max(15)
+schema.time = Joi.number().min(0)
 schema.roomExists = {
   msg: {
     roomid: schema.roomid.required()
@@ -61,7 +59,11 @@ schema.chatMsg = {
 }
 schema.quizMusic = {
   msg: {
-    buf: Joi.binary().required()
+    buf: Joi.binary().required(),
+    epoch: Joi.number()
+      .integer()
+      .required()
+      .min(1551149658543)
   },
   done: Joi.func().required()
 }
@@ -122,6 +124,7 @@ function validate (value, schema) {
 
 const STAGE = {
   WAITING_QUIZ_MUSIC: 0,
+  WAITING_STOP_MUSIC: 3,
   WAITING_QUIZ_ANSWER: 1,
   WAITING_QUIZ_RESET: 2
 }
@@ -263,6 +266,7 @@ async function main () {
 
       const isMaster = (await db.getRoomMasterUid(roomid)) === uid
 
+      socket.join(socket.id)
       socket.join(roomid)
       await db.setSid(uid, socket.id)
       log('auth')
@@ -306,7 +310,7 @@ async function main () {
           return
         }
 
-        await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)
+        await db.updateRoomStage(roomid, STAGE.WAITING_STOP_MUSIC)
         // increment the round in advance to send the new round when this game is reset in between
         await db.updateRound(roomid)
 
@@ -314,6 +318,21 @@ async function main () {
 
         socket.to(roomid).emit('quiz-music', msg)
         done()
+      })
+
+      socket.on('quiz-stop-music', async () => {
+        const room = await db.getRoom(roomid)
+        if (room.stage !== STAGE.WAITING_STOP_MUSIC) {
+          log('quiz-stop-music failed')
+          return
+        }
+
+        log('quiz-stop-music')
+
+        //if (room.stopMusic)
+        socket.to(roomid).emit('quiz-stop-music')
+
+        db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)
       })
 
       socket.on('quiz-answer', async (msg, done) => {
@@ -333,7 +352,7 @@ async function main () {
 
         log('quiz-answer: ' + (msg.answer ? msg.answer : 'THROUGH'))
 
-        io.to(master).emit('quiz-answer', {
+        socket.to(master).emit('quiz-answer', {
           uid: uid,
           time: msg.time,
           answer: msg.answer,

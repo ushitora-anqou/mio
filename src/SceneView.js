@@ -276,157 +276,57 @@ function ShareURL (props) {
   )
 }
 
-class PlayAndAnswer extends Component {
-  constructor (props) {
-    super(props)
+function PlayMusic (props) {
+  const [source, setSource] = React.useState(null)
+  const [startTime, setStartTime] = React.useState(null)
 
-    this.state = {
-      scene: (
-        <PlayMusic
-          music={props.music}
-          onMusicStart={this.handleStartMusic}
-          onMusicStop={this.handleStopMusic}
-          onFailToLoad={props.onFailToLoad}
-        />
-      ),
-      time: null
-    }
-  }
+  const handleClick = React.useCallback(() => {
+    if (source) source.stop()
+    props.onStop(audioMan.getCurrentTime() - startTime)
+  }, [source, startTime])
 
-  handleStartMusic = currentTime => {
-    this.startTime = currentTime
-  }
-
-  handleStopMusic = currentTime => {
-    this.setState({
-      time: currentTime - this.startTime,
-      scene: <InputAnswer onSubmit={this.handleSubmit} />
-    })
-  }
-
-  handleSubmit = answer => {
-    this.props.onAnswer(this.state.time, answer)
-  }
-
-  render () {
-    return <div className='PlayAndAnswer'>{this.state.scene}</div>
-  }
-}
-
-class PlayMusic extends Component {
-  constructor (props) {
-    super(props)
-
-    this.state = {
-      playing: false,
-      music_buf: null
-    }
-    this.audioCtx = new AudioContext()
-    this.audioCtx
+  // constructor
+  React.useEffect(() => {
+    audioMan
       .decodeAudioData(props.music)
       .then(buf => {
-        this.setState({ music_buf: buf })
+        const milliDelay = props.timeStart - Date.now()
+        setSource(
+          audioMan.playMusic(buf, {
+            when: audioMan.getCurrentTime() + milliDelay / 1000
+          })
+        )
+        setTimeout(() => setStartTime(audioMan.getCurrentTime()), milliDelay)
+        setTimeout(props.onThrough, milliDelay + buf.duration * 1000)
       })
-      .catch(err => {
-        // Can't load the music file.
-        console.log(err)
-        if (props.onFailToLoad) props.onFailToLoad()
-      })
-  }
+      .catch(err => props.onFailToLoad())
+  }, [])
 
-  componentWillUnmount () {
-    if (this.source) {
-      this.source.onended = null
-      this.source.stop()
+  // destructor
+  React.useEffect(() => {
+    return () => {
+      if (source) source.stop()
     }
-  }
-
-  onClickStart = () => {
-    if (this.state.music_buf) {
-      this.setState({ playing: true })
-      if (this.props.onMusicStart)
-        this.props.onMusicStart(this.audioCtx.currentTime)
-
-      // play the music
-      this.source = this.audioCtx.createBufferSource()
-      this.source.buffer = this.state.music_buf
-      this.source.connect(this.audioCtx.destination)
-      this.source.onended = () => {
-        this.setState({ playing: false })
-        if (this.props.onMusicStop)
-          this.props.onMusicStop(this.audioCtx.currentTime)
-      }
-      this.source.start(0)
-    }
-  }
-
-  onClickStop = () => {
-    if (this.source) this.source.stop()
-  }
-
-  render () {
-    const props = {
-      disabled: this.state.music_buf ? false : true,
-      playing: this.state.playing,
-      onClickStart: this.onClickStart,
-      onClickStop: this.onClickStop
-    }
-
-    if (this.props.render) return this.props.render(props)
-
-    return <MusicPlayingButton {...props} />
-  }
-}
-
-function MusicPlayerButton (props) {
-  const [music, setMusic] = React.useState(null)
-  const [source, setSource] = React.useState(null)
-  const [playing, setPlaying] = React.useState(false)
-  const handleClickStart = React.useCallback(() => {
-    setPlaying(true)
-    setSource(audioMan.playMusic(music))
-  }, [music])
-  const handleClickStop = React.useCallback(() => {
-    source.stop()
-    setPlaying(false)
-    setSource(null)
   }, [source])
 
-  audioMan
-    .decodeAudioData(props.music)
-    .then(buf => setMusic(buf))
-    .catch(err => {
-      if (props.onFailToLoad) props.onFailToLoad()
-    })
+  if (props.stopPlaying && source) {
+    source.stop()
+    setSource(null)
+  }
 
   return (
-    <>
-      {playing ? (
-        <button onClick={handleClickStop}>
-          <FontAwesomeIcon icon={['far', 'stop-circle']} />
-        </button>
+    <div className='PlayMusic'>
+      {startTime ? (
+        <>
+          {source ? <p>再生中</p> : <p>停止</p>}
+          <button onClick={handleClick}>
+            <FontAwesomeIcon icon={['far', 'stop-circle']} />
+          </button>
+        </>
       ) : (
-        <button onClick={handleClickStart} disabled={music ? false : true}>
-          <FontAwesomeIcon icon={['far', 'play-circle']} />
-        </button>
+        <p>問題</p>
       )}
-    </>
-  )
-}
-
-function MusicPlayingButton (props) {
-  return (
-    <>
-      {props.playing ? (
-        <button onClick={props.onClickStop}>
-          <FontAwesomeIcon icon={['far', 'stop-circle']} />
-        </button>
-      ) : (
-        <button onClick={props.onClickStart} disabled={props.disabled}>
-          <FontAwesomeIcon icon={['far', 'play-circle']} />
-        </button>
-      )}
-    </>
+    </div>
   )
 }
 
@@ -477,6 +377,43 @@ class InputAnswer extends Component {
       </div>
     )
   }
+}
+
+function MusicPlayerButton (props) {
+  const [music, setMusic] = React.useState(null)
+  const [source, setSource] = React.useState(null)
+  const [playing, setPlaying] = React.useState(false)
+  const handleClickStart = React.useCallback(() => {
+    setPlaying(true)
+    setSource(audioMan.playMusic(music))
+  }, [music])
+  const handleClickStop = React.useCallback(() => {
+    source.stop()
+    setPlaying(false)
+    setSource(null)
+  }, [source])
+
+  if (!music)
+    audioMan
+      .decodeAudioData(props.music)
+      .then(buf => setMusic(buf))
+      .catch(err => {
+        if (props.onFailToLoad) props.onFailToLoad()
+      })
+
+  return (
+    <>
+      {playing ? (
+        <button onClick={handleClickStop}>
+          <FontAwesomeIcon icon={['far', 'stop-circle']} />
+        </button>
+      ) : (
+        <button onClick={handleClickStart} disabled={music ? false : true}>
+          <FontAwesomeIcon icon={['far', 'play-circle']} />
+        </button>
+      )}
+    </>
+  )
 }
 
 class SelectCorrectAnswer extends Component {
@@ -680,7 +617,8 @@ class SceneView extends Component {
 
     this.SCENE = {
       WAIT_MUSIC: 0,
-      PLAY_AND_ANSWER: 1,
+      PLAY_MUSIC: 5,
+      INPUT_ANSWER: 6,
       SELECT_CORRECT_ANSWER: 2,
       SHOW_RESULT: 3,
       WAIT_RESET: 4
@@ -716,14 +654,21 @@ class SceneView extends Component {
         )
         break
 
-      case S.PLAY_AND_ANSWER:
+      case S.PLAY_MUSIC:
         content = (
-          <PlayAndAnswer
+          <PlayMusic
             music={this.state.scene.music}
-            onAnswer={this.handleInputAnswer}
-            onFailToLoad={this.handleFailToLoadMusicToPlay}
+            timeStart={this.state.scene.timeStart}
+            onStop={this.handleStopMusic}
+            onThrough={this.handleThroughMusic}
+            onFailToLoad={this.handleFailToLoadMusicToplay}
+            stopPlaying={this.state.scene.stop}
           />
         )
+        break
+
+      case S.INPUT_ANSWER:
+        content = <InputAnswer onSubmit={this.handleSubmitAnswer} />
         break
 
       case S.SELECT_CORRECT_ANSWER:
@@ -808,6 +753,7 @@ class SceneView extends Component {
 
     this.socket.on('error', this.onError)
     this.socket.on('quiz-music', this.onQuizMusic)
+    this.socket.on('quiz-stop-music', this.onQuizStopMusic)
     this.socket.on('quiz-answer', this.onQuizAnswer)
     this.socket.on('quiz-result', this.onQuizResult)
     this.socket.on('quiz-reset', this.onQuizReset)
@@ -816,6 +762,7 @@ class SceneView extends Component {
   componentWillUnmount () {
     this.socket.off('error', this.onError)
     this.socket.off('quiz-music', this.onQuizMusic)
+    this.socket.off('quiz-stop-music', this.onQuizStopMusic)
     this.socket.off('quiz-answer', this.onQuizAnswer)
     this.socket.off('quiz-result', this.onQuizResult)
     this.socket.off('quiz-reset', this.onQuizReset)
@@ -840,9 +787,28 @@ class SceneView extends Component {
   handleSendMusic = ({ music, title }) => {
     this._emitAndChangeScene(
       'quiz-music',
-      { buf: music },
+      { buf: music, epoch: Date.now() },
       this.SCENE.SELECT_CORRECT_ANSWER,
       { music: music.buffer, answers: {}, answer: title }
+    )
+  }
+
+  handleStopMusic = time => {
+    this.socket.emit('quiz-stop-music')
+    this._changeScene(this.SCENE.INPUT_ANSWER, { time })
+  }
+
+  handleThroughMusic = () => {
+    this.socket.emit('quiz-stop-music')
+    this.handleSubmitAnswer(null, 100)
+  }
+
+  handleSubmitAnswer = (answer, time) => {
+    this._emitAndChangeScene(
+      'quiz-answer',
+      { time: time ? time : this.state.scene.time, answer },
+      this.SCENE.SHOW_RESULT,
+      { answers: {}, answer: '' }
     )
   }
 
@@ -897,10 +863,22 @@ class SceneView extends Component {
   }
 
   onQuizMusic = msg => {
-    this._changeScene(this.SCENE.PLAY_AND_ANSWER, { music: msg.buf })
+    this._changeScene(this.SCENE.PLAY_MUSIC, {
+      music: msg.buf,
+      timeStart: msg.epoch + 5 * 1000,
+      stop: false
+    })
+  }
+
+  onQuizStopMusic = () => {
+    if (!this.props.master && this._checkScene(this.SCENE.PLAY_MUSIC))
+      this.setState((state, props) => ({
+        scene: update(state.scene, { stop: { $set: true } })
+      }))
   }
 
   onQuizAnswer = msg => {
+    console.log(msg)
     // append answer
     this.setState((state, props) => ({
       scene: update(state.scene, {
@@ -912,7 +890,8 @@ class SceneView extends Component {
   onQuizResult = msg => {
     if (
       !(
-        this._checkScene(this.SCENE.PLAY_AND_ANSWER) ||
+        this._checkScene(this.SCENE.PLAY_MUSIC) ||
+        this._checkScene(this.SCENE.INPUT_ANSWER) ||
         this._checkScene(this.SCENE.SHOW_RESULT)
       )
     )
