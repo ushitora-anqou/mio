@@ -392,28 +392,42 @@ class InputAnswer extends Component {
 function MusicPlayerButton (props) {
   const [music, setMusic] = React.useState(null)
   const [source, setSource] = React.useState(null)
-  const [playing, setPlaying] = React.useState(false)
   const handleClickStart = React.useCallback(() => {
-    setPlaying(true)
-    setSource(audioMan.playMusic(music))
+    if (source) return
+    setSource(
+      audioMan.playMusic(music, {
+        onended: () => setSource(null)
+      })
+    )
   }, [music])
   const handleClickStop = React.useCallback(() => {
+    if (!source) return
     source.stop()
-    setPlaying(false)
-    setSource(null)
   }, [source])
 
-  if (!music)
+  // constructor
+  React.useEffect(() => {
     audioMan
       .decodeAudioData(props.music)
       .then(buf => setMusic(buf))
       .catch(err => {
         if (props.onFailToLoad) props.onFailToLoad()
       })
+  }, [])
+
+  // destructor
+  React.useEffect(() => {
+    return () => {
+      if (source) {
+        source.onended = null // avoid "Warning: Can't perform a React state update on an unmounted component"
+        source.stop()
+      }
+    }
+  }, [source])
 
   return (
     <>
-      {playing ? (
+      {source ? (
         <button onClick={handleClickStop}>
           <FontAwesomeIcon icon={['far', 'stop-circle']} />
         </button>
