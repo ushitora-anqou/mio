@@ -123,9 +123,9 @@ class CreateRoom extends Component {
     audioMan.resetContext()
 
     if (!isPrintable(this.inputName.current.value)) return
+    // blank treated as zero
     const correctPoint = Number(this.inputCorrectPoint.current.value)
     const wrongPoint = Number(this.inputWrongPoint.current.value)
-    if (!correctPoint || !wrongPoint) return
 
     this.setState({ sending: true })
 
