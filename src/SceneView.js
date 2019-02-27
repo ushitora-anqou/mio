@@ -287,6 +287,8 @@ function PlayMusic (props) {
 
   // constructor
   React.useEffect(() => {
+    let throughTimer = null
+
     audioMan
       .decodeAudioData(props.music)
       .then(buf => {
@@ -297,12 +299,20 @@ function PlayMusic (props) {
           })
         )
         setTimeout(() => setStartTime(audioMan.getCurrentTime()), milliDelay)
-        setTimeout(props.onThrough, milliDelay + buf.duration * 1000)
+        throughTimer = setTimeout(
+          props.onThrough,
+          milliDelay + buf.duration * 1000
+        )
       })
       .catch(err => props.onFailToLoad())
+
+    // destructor
+    return () => {
+      if (throughTimer) clearTimeout(throughTimer)
+    }
   }, [])
 
-  // destructor
+  // destructor for source
   React.useEffect(() => {
     return () => {
       if (source) source.stop()
@@ -878,7 +888,6 @@ class SceneView extends Component {
   }
 
   onQuizAnswer = msg => {
-    console.log(msg)
     // append answer
     this.setState((state, props) => ({
       scene: update(state.scene, {
