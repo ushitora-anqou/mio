@@ -375,7 +375,8 @@ async function main () {
                 !validate(uid, schema.uid) &&
                 !validate(msg.answers[uid], schema.quizResultAnswer)
             ) &&
-            (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) &&
+            ((await db.checkRoomStage(roomid, STAGE.WAITING_STOP_MUSIC)) ||
+              (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER))) &&
             isMaster
           )
         ) {
