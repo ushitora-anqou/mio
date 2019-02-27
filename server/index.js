@@ -154,6 +154,10 @@ async function main () {
     const glog = msg => {
       console_log('[' + socket.id + '] ' + msg)
     }
+    const io_to_emit = (roomid, ...args) => {
+      socket.to(roomid).emit(...args)
+      socket.emit(...args)
+    }
     let alreadyIssuedUid = false
 
     glog(`Connect: ${handshake}`)
@@ -238,12 +242,12 @@ async function main () {
       }
 
       const sendUserList = async () => {
-        io.to(roomid).emit('users', await db.getAllUsersIn(roomid))
+        io_to_emit(roomid, 'users', await db.getAllUsersIn(roomid))
       }
 
       const sendQuizInfo = async () => {
         const room = await db.getRoom(roomid)
-        io.to(roomid).emit('quiz-info', {
+        io_to_emit(roomid, 'quiz-info', {
           round:
             room.stage === STAGE.WAITING_QUIZ_MUSIC
               ? room.round
@@ -255,7 +259,7 @@ async function main () {
 
       const sendChatMsg = async (tag, body = '') => {
         body = body || ''
-        io.to(roomid).emit('chat-msg', {
+        io_to_emit(roomid, 'chat-msg', {
           mid: uuid(),
           uid: uid,
           name: await db.getNameOf(uid),
