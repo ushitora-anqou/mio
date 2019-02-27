@@ -21,20 +21,23 @@ import {
 import { faTimes } from '@fortawesome/free-solid-svg-icons'
 library.add(faCircle, faTimes, faPlayCircle, faStopCircle)
 
+function parseJSON (src) {
+  try {
+    return JSON.parse(src)
+  } catch (err) {
+    if (err instanceof 'SyntaxError') return null
+    else throw err
+  }
+}
+
 class IssueAccount extends Component {
   constructor (props) {
     super(props)
 
     this.STAGE = { WAITING_INPUT: 0, CONNECTING: 1, REDIRECT: 2, ERROR: 3 }
-    this.state = { state: null, stage: null }
+    this.state = { state: null, stage: this.STAGE.WAITING_INPUT }
     this.inputName = React.createRef()
-    this.socket = newSocket()
-
-    this.socket.emit('room-exists', { roomid: this.props.roomid }, exists => {
-      this.setState({
-        stage: exists ? this.STAGE.WAITING_INPUT : this.STAGE.ERROR
-      })
-    })
+    this.socket = props.socket
   }
 
   handleSubmit = e => {
@@ -183,13 +186,14 @@ class CreateRoom extends Component {
   }
 }
 
-function parseJSON (src) {
-  try {
-    return JSON.parse(src)
-  } catch (err) {
-    if (err instanceof 'SyntaxError') return null
-    else throw err
-  }
+function AudioEnabler (props) {
+  return (
+    <div>
+      <Link to={`/room/${props.roomid}`} onClick={audioMan.resetContext()}>
+        すまんのだけど、ここ押してもらっていい？
+      </Link>
+    </div>
+  )
 }
 
 const App = () => (
@@ -237,21 +241,41 @@ const RoomNotFound = ({ location }) => (
   </div>
 )
 
-const Room = ({ match, location }) => {
-  const roomid = match.params.roomid
-  const props = location.state
-    ? {
-        master: location.state.master,
-        uid: location.state.uid,
-        password: location.state.password
-      }
-    : parseJSON(roomStorage(roomid).getItem('auth'))
+class Room extends Component {
+  constructor (props) {
+    super(props)
 
-  return props ? (
-    <QuizRoom roomid={roomid} {...props} />
-  ) : (
-    <IssueAccount roomid={roomid} />
-  )
+    this.state = {
+      exists: null
+    }
+
+    const roomid = props.match.params.roomid
+    this.socket = newSocket()
+    this.socket.emit('room-exists', { roomid }, exists => {
+      this.setState({ exists })
+    })
+  }
+
+  render () {
+    if (this.state.exists === null) return null
+    if (this.state.exists === false) return <Route component={RoomNotFound} />
+
+    const roomid = this.props.match.params.roomid
+    const location_state = this.props.location.state
+    const props = location_state
+      ? {
+          master: location_state.master,
+          uid: location_state.uid,
+          password: location_state.password
+        }
+      : parseJSON(roomStorage(roomid).getItem('auth'))
+
+    if (!props) return <IssueAccount socket={this.socket} roomid={roomid} />
+
+    if (!audioMan.isEnabled()) return <AudioEnabler roomid={roomid} />
+
+    return <QuizRoom roomid={roomid} {...props} />
+  }
 }
 
 export default App

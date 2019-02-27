@@ -28,6 +28,10 @@ class AudioManager {
     this.audioCtx = null
   }
 
+  isEnabled () {
+    return !!this.audioCtx
+  }
+
   resetContext () {
     const AudioContext = window.AudioContext || window.webkitAudioContext
     this.audioCtx = new AudioContext()
