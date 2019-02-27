@@ -358,11 +358,6 @@ class InputAnswer extends Component {
     this.setState({ sending: true })
   }
 
-  handleThrough = () => {
-    this.props.onSubmit(null)
-    this.setState({ sending: true })
-  }
-
   render () {
     return (
       <div className='InputAnswer'>
@@ -378,12 +373,6 @@ class InputAnswer extends Component {
             送信
           </button>
         </form>
-        <button
-          disabled={this.state.sending || !this.context.established}
-          onClick={this.handleThrough}
-        >
-          スルー
-        </button>
       </div>
     )
   }
