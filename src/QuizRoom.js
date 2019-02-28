@@ -108,7 +108,7 @@ class QuizRoom extends Component {
           />
           <div>
             <ConnectionStatus />
-            <QuizStatus round={this.state.round} />
+            <QuizStatus round={this.state.round} point={this.state.point} />
             <QuizHistory history={this.state.quizHistory} />
             <UserList
               users={this.state.users}
@@ -215,7 +215,19 @@ class ConnectionStatus extends Component {
 function QuizStatus (props) {
   return (
     <div className='QuizStatus'>
-      <p>Round {props.round}</p>
+      <span>Round {props.round}</span>
+      {props.point && (
+        <>
+          <span>
+            {props.point.correct}点／
+            <FontAwesomeIcon icon={['far', 'circle']} />
+          </span>
+          <span>
+            {props.point.wrong}点／
+            <FontAwesomeIcon icon='times' />
+          </span>{' '}
+        </>
+      )}
     </div>
   )
 }

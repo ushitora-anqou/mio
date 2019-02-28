@@ -118,3 +118,10 @@
   grid-template-columns: 200px 60px 60px 80px;
   grid-template-rows: 30px;
 }
+
+.QuizStatus {
+  margin: 10px;
+  height: 25px;
+  display: grid;
+  grid-template-columns: 200px 100px 100px;
+}
