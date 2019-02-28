@@ -3,7 +3,6 @@
   margin: 1% auto;
 }
 
-
 .CreateRoom > form {
   display: grid;
   grid-template-columns: 200px 200px;
@@ -18,4 +17,11 @@
 .CreateRoom > form > input,
 .CreateRoom > form > button {
   grid-column: 2 / 3;
+}
+
+footer {
+  border-top: 1px solid #ccc;
+  font-size: small;
+  margin-top: 50px;
+  padding: 10px;
 }

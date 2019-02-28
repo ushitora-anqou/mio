@@ -206,6 +206,12 @@ const App = () => (
         <Route path='/room/:roomid' component={Room} />
         <Route component={NoMatch} />
       </Switch>
+      <footer>
+        Mioは最新のGoogle Chromeで動作確認しています。Mioはオープンソースです。
+        <a href='https://github.com/ushitora-anqou/mio'>
+          GitHubにてソースコードを公開しています。
+        </a>
+      </footer>
     </div>
   </Router>
 )
