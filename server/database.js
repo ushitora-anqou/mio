@@ -141,15 +141,19 @@ async function newSequelizeDatabase (url, options) {
       }
     }
 
-    async userExists (uid, password, roomid) {
-      try {
-        const user = await User.findOne({
-          where: { id: uid, password, roomId: roomid }
-        })
-        return !!user
-      } catch (err) {
-        return false
-      }
+    async setSidIf (uid, password, roomid, sid) {
+      const result = await User.update(
+        { socketId: sid },
+        {
+          where: {
+            id: uid,
+            password,
+            roomId: roomid,
+            socketId: { [Op.eq]: null }
+          }
+        }
+      )
+      return result[0] <= 0
     }
 
     // REMARK: Any user will be removed only by deleting the room

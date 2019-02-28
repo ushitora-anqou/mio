@@ -225,18 +225,25 @@ async function main () {
     })
 
     socket.emit('auth', {}, async (uid, password, roomid) => {
-      // check if auth is correct
-      if (
-        !(
-          !validate({ uid, password, roomid }, schema.auth) &&
-          (await db.userExists(uid, password, roomid)) &&
-          !(await db.isIn(uid, roomid))
-        )
-      ) {
-        glog('auth failed')
+      // set sid if auth is correct
+      try {
+        if (validate({ uid, password, roomid }, schema.auth))
+          throw new Error('validation failed')
+        if (await db.setSidIf(uid, password, roomid, socket.id))
+          throw new Error('invalid authentication')
+      } catch (err) {
+        glog(`auth failed: ${err}`)
         socket.emit('auth-result', { status: 'ng' })
         return
       }
+
+      // ASSERT: only one socket per uid can reach here.
+      // In Socket.IO, asynchronized functions as event handler of a certain socket
+      // are await-ed and executed in accepted order
+      // (TODO: this behavior should be ensured).
+      // Therefore, race condition (or something like that)
+      // will never occur unless different sockets
+      // operate on a same record of the database.
 
       const log = msg => {
         glog(`[${uid} / ${roomid}] ${msg}`)
@@ -273,7 +280,6 @@ async function main () {
 
       socket.join(socket.id)
       socket.join(roomid)
-      await db.setSid(uid, socket.id)
       log('auth')
 
       // If the master refresh the page, reset the game.
