@@ -189,9 +189,13 @@ class CreateRoom extends Component {
 function AudioEnabler (props) {
   return (
     <div>
-      <Link to={`/room/${props.roomid}`} onClick={audioMan.resetContext()}>
-        すまんのだけど、ここ押してもらっていい？
-      </Link>
+      <h2>一時退出中</h2>
+      <p>一時的に退室しましたが、部屋はまだ残っています。</p>
+      <p>
+        <Link to={`/room/${props.roomid}`} onClick={audioMan.resetContext()}>
+          再入室する
+        </Link>
+      </p>
     </div>
   )
 }
