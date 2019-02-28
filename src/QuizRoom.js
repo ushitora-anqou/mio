@@ -94,7 +94,7 @@ class QuizRoom extends Component {
         value={{
           established: this.state.established,
           numOfOnlineUsers: this.state.users.filter(user => user.online).length,
-          sessionStorage: roomStorage(this.roomid)
+          roomStorage: roomStorage(this.roomid)
         }}
       >
         <div className='QuizRoom'>

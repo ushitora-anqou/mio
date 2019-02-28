@@ -60,8 +60,36 @@ class SelectMusic extends Component {
       sending: false,
       randomPlay: false,
       randomSelect: false,
+      stoppable: false,
       selectedFile: null
     }
+  }
+
+  componentDidMount () {
+    this.setState({
+      randomPlay:
+        this.context.roomStorage.getItem('checkRandomPlay') === 'enabled',
+      randomSelect:
+        this.context.roomStorage.getItem('checkRandomSelect') === 'enabled',
+      stoppable:
+        this.context.roomStorage.getItem('checkStoppable') === 'enabled'
+    })
+  }
+
+  componentWillUnmount () {
+    if (this.timerID) clearInterval(this.timerID)
+    this.context.roomStorage.setItem(
+      'checkRandomPlay',
+      this.state.randomPlay ? 'enabled' : 'disabled'
+    )
+    this.context.roomStorage.setItem(
+      'checkRandomSelect',
+      this.state.randomSelect ? 'enabled' : 'disabled'
+    )
+    this.context.roomStorage.setItem(
+      'checkStoppable',
+      this.state.stoppable ? 'enabled' : 'disabled'
+    )
   }
 
   handleSubmit = async e => {
@@ -110,33 +138,13 @@ class SelectMusic extends Component {
 
       this.props.onSendMusic({
         music: musicBuf,
-        title: this.state.selectedFile.name
+        title: this.state.selectedFile.name,
+        stoppable: this.state.stoppable
       })
       this.timerID = setTimeout(() => {
         this.setState({ sending: false })
       }, 2000)
     }
-  }
-
-  componentDidMount () {
-    this.setState({
-      randomPlay:
-        this.context.sessionStorage.getItem('checkRandomPlay') === 'enabled',
-      randomSelect:
-        this.context.sessionStorage.getItem('checkRandomSelect') === 'enabled'
-    })
-  }
-
-  componentWillUnmount () {
-    if (this.timerID) clearInterval(this.timerID)
-    this.context.sessionStorage.setItem(
-      'checkRandomPlay',
-      this.state.randomPlay ? 'enabled' : 'disabled'
-    )
-    this.context.sessionStorage.setItem(
-      'checkRandomSelect',
-      this.state.randomSelect ? 'enabled' : 'disabled'
-    )
   }
 
   render () {
@@ -177,6 +185,16 @@ class SelectMusic extends Component {
                   }
                 />
                 再生位置をランダムにする
+              </label>
+            </div>
+            <div>
+              <label>
+                <input
+                  type='checkbox'
+                  checked={this.state.stoppable}
+                  onChange={e => this.setState({ stoppable: e.target.checked })}
+                />
+                押下で全員の再生を停止する
               </label>
             </div>
             <div>
@@ -797,10 +815,10 @@ class SceneView extends Component {
     })
   }
 
-  handleSendMusic = ({ music, title }) => {
+  handleSendMusic = ({ music, title, stoppable }) => {
     this._emitAndChangeScene(
       'quiz-music',
-      { buf: music, epoch: Date.now() },
+      { buf: music, epoch: Date.now(), stoppable },
       this.SCENE.SELECT_CORRECT_ANSWER,
       { music: music.buffer, answers: {}, answer: title }
     )

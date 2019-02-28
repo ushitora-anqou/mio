@@ -63,7 +63,8 @@ schema.quizMusic = {
     epoch: Joi.number()
       .integer()
       .required()
-      .min(1551149658543)
+      .min(1551149658543),
+    stoppable: Joi.boolean().required()
   },
   done: Joi.func().required()
 }
@@ -314,7 +315,11 @@ async function main () {
           return
         }
 
-        await db.updateRoomStage(roomid, STAGE.WAITING_STOP_MUSIC)
+        await db.updateRoomStage(
+          roomid,
+          msg.stoppable ? STAGE.WAITING_STOP_MUSIC : STAGE.WAITING_QUIZ_ANSWER
+        )
+
         // increment the round in advance to send the new round when this game is reset in between
         await db.updateRound(roomid)
 
@@ -325,15 +330,13 @@ async function main () {
       })
 
       socket.on('quiz-stop-music', async () => {
-        const room = await db.getRoom(roomid)
-        if (room.stage !== STAGE.WAITING_STOP_MUSIC) {
+        if (!(await db.checkRoomStage(roomid, STAGE.WAITING_STOP_MUSIC))) {
           log('quiz-stop-music failed')
           return
         }
 
         log('quiz-stop-music')
 
-        //if (room.stopMusic)
         socket.to(roomid).emit('quiz-stop-music')
 
         db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)
