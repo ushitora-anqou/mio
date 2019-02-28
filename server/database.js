@@ -162,11 +162,32 @@ async function newSequelizeDatabase (url, options) {
       return Room.destroy({ where: { id: roomid } })
     }
 
-    async isIn (uid, roomid) {
-      const user = await User.findOne({
-        where: { id: uid, roomId: roomid, socketId: { [Op.ne]: null } }
+    _subquery (model, options) {
+      const { QueryGenerator } = model
+      const sql = QueryGenerator.selectQuery(model.tableName, options, model)
+      return Sequelize.literal(`(${sql.replace(/;\s*$/, '')})`)
+    }
+
+    async deleteRoomIfNoOneIsIn (roomid) {
+      const activeRoomIds = this._subquery(User, {
+        attributes: ['roomId'],
+        where: {
+          socketId: { [Op.ne]: null },
+          roomId: roomid
+        }
       })
-      return !!user
+
+      const result = await Room.destroy({
+        where: {
+          id: roomid,
+          [Op.and]: {
+            id: {
+              [Op.notIn]: activeRoomIds
+            }
+          }
+        }
+      })
+      return result <= 0
     }
 
     async isAnyoneIn (roomid) {

@@ -453,14 +453,13 @@ async function main () {
 
         await db.deleteSidOf(uid)
 
-        if (await db.isAnyoneIn(roomid)) {
-          sendUserList() // update the list of clients
+        if (await db.deleteRoomIfNoOneIsIn(roomid)) {
+          // not deleted
+          sendUserList()
           return
         }
 
-        // Delete the room if no one is connecting to it
         log('Delete room')
-        await db.deleteRoom(roomid)
       })
 
       sendChatMsg('join')
