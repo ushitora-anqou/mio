@@ -280,7 +280,7 @@ async function main () {
       // TODO: stable page refreshing
       if (
         isMaster &&
-        !(await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC))
+        !(await db.isRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC))
       ) {
         await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
         sendQuizInfo()
@@ -307,7 +307,7 @@ async function main () {
         if (
           !(
             !validate({ msg, done }, schema.quizMusic) &&
-            (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)) &&
+            (await db.isRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)) &&
             isMaster
           )
         ) {
@@ -352,7 +352,7 @@ async function main () {
         if (
           !(
             !validate({ msg, done }, schema.quizAnswer) &&
-            (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) &&
+            (await db.isRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) &&
             master !== undefined &&
             !isMaster
           )
@@ -382,8 +382,8 @@ async function main () {
                 !validate(uid, schema.uid) &&
                 !validate(msg.answers[uid], schema.quizResultAnswer)
             ) &&
-            ((await db.checkRoomStage(roomid, STAGE.WAITING_STOP_MUSIC)) ||
-              (await db.checkRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER))) &&
+            ((await db.isRoomStage(roomid, STAGE.WAITING_STOP_MUSIC)) ||
+              (await db.isRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER))) &&
             isMaster
           )
         ) {
@@ -461,7 +461,7 @@ async function main () {
 
       socket.emit('auth-result', {
         status: 'ok',
-        shouldWaitForReset: !(await db.checkRoomStage(
+        shouldWaitForReset: !(await db.isRoomStage(
           roomid,
           STAGE.WAITING_QUIZ_MUSIC
         ))

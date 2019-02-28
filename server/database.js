@@ -106,7 +106,7 @@ async function newSequelizeDatabase (url, options) {
       }
     }
 
-    async checkRoomStage (roomid, stage) {
+    async isRoomStage (roomid, stage) {
       try {
         const room = await Room.findOne({ where: { id: roomid } })
         return room.stage === stage
@@ -290,17 +290,17 @@ async function test () {
 
   console.log(await db.createUser(roomid, 'hogepiyo'))
 
-  assert(await db.checkRoomStage(roomid, 0), true)
+  assert(await db.isRoomStage(roomid, 0), true)
   assert(
-    await db.checkRoomStage('ac2d8ccb-b1d7-4022-a05f-20c9d91c943c', 0),
+    await db.isRoomStage('ac2d8ccb-b1d7-4022-a05f-20c9d91c943c', 0),
     false
   )
-  assert(await db.checkRoomStage('hogehoge', 0), false)
+  assert(await db.isRoomStage('hogehoge', 0), false)
 
   await db.updateRoomStage(roomid, 1)
-  assert(await db.checkRoomStage(roomid, 1), true)
+  assert(await db.isRoomStage(roomid, 1), true)
   await db.setAllRoomStage(0)
-  assert(await db.checkRoomStage(roomid, 0), true)
+  assert(await db.isRoomStage(roomid, 0), true)
 
   assert(await db.roomExists(roomid), true)
   assert(await db.roomExists('ac2d8ccb-b1d7-4022-a05f-20c9d91c943c'), false)
