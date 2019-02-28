@@ -505,7 +505,7 @@ class SelectCorrectAnswer extends Component {
           {canSendResult() && (
             <button
               className='SelectCorrectAnswerScoringEnd'
-              onClick={this.props.onSendResult}
+              onClick={this.handleSend}
               disabled={this.state.sending || !this.context.established}
             >
               採点終了
@@ -621,7 +621,7 @@ class ShowResult extends Component {
             <ShowResultEntries entries={this.props.answers} judging={false} />
             {this.props.master && (
               <button
-                onClick={this.props.onReset}
+                onClick={this.handleReset}
                 disabled={this.state.sending || !this.context.established}
               >
                 次のゲームへ

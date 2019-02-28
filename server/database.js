@@ -129,7 +129,7 @@ async function newSequelizeDatabase (url, options) {
           }
         }
       )
-      return result[0] > 0
+      return result[0] <= 0
     }
 
     async roomExists (roomid) {

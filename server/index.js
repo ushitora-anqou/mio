@@ -331,11 +331,11 @@ async function main () {
 
       socket.on('quiz-stop-music', async () => {
         if (
-          !(await db.updateRoomStageIf(
+          await db.updateRoomStageIf(
             roomid,
             STAGE.WAITING_STOP_MUSIC,
             STAGE.WAITING_QUIZ_ANSWER
-          ))
+          )
         ) {
           log('quiz-stop-music failed')
           return
@@ -403,19 +403,27 @@ async function main () {
       })
 
       socket.on('quiz-reset', async (msg, done) => {
-        if (!(!validate({ msg, done }, schema.quizReset) && isMaster)) {
-          log('quiz-reset failed')
-          return
+        try {
+          if (validate({ msg, done }, schema.quizReset) && isMaster)
+            throw new Error('validation failed')
+          if (
+            await db.updateRoomStageIf(
+              roomid,
+              STAGE.WAITING_QUIZ_RESET,
+              STAGE.WAITING_QUIZ_MUSIC
+            )
+          )
+            throw new Error('stage is not WAITING_QUIZ_RESET')
+
+          log('quiz-reset')
+
+          sendQuizInfo()
+          socket.to(roomid).emit('quiz-reset', { message: msg.message })
+
+          done()
+        } catch (err) {
+          log(`quiz-reset failed: ${err}`)
         }
-
-        log('quiz-reset')
-
-        await db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)
-
-        sendQuizInfo()
-        socket.to(roomid).emit('quiz-reset', { message: msg.message })
-
-        done()
       })
 
       socket.on('change-score', async (msg, done) => {
