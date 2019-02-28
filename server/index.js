@@ -330,7 +330,13 @@ async function main () {
       })
 
       socket.on('quiz-stop-music', async () => {
-        if (!(await db.checkRoomStage(roomid, STAGE.WAITING_STOP_MUSIC))) {
+        if (
+          !(await db.updateRoomStageIf(
+            roomid,
+            STAGE.WAITING_STOP_MUSIC,
+            STAGE.WAITING_QUIZ_ANSWER
+          ))
+        ) {
           log('quiz-stop-music failed')
           return
         }
@@ -338,8 +344,6 @@ async function main () {
         log('quiz-stop-music')
 
         socket.to(roomid).emit('quiz-stop-music')
-
-        db.updateRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)
       })
 
       socket.on('quiz-answer', async (msg, done) => {

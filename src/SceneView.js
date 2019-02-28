@@ -902,7 +902,7 @@ class SceneView extends Component {
   }
 
   onQuizStopMusic = () => {
-    if (!this.props.master && this._checkScene(this.SCENE.PLAY_MUSIC))
+    if (!this.props.master)
       this.setState((state, props) => ({
         scene: update(state.scene, { stop: { $set: true } })
       }))

@@ -119,6 +119,19 @@ async function newSequelizeDatabase (url, options) {
       return Room.update({ stage }, { where: { id: roomid } })
     }
 
+    async updateRoomStageIf (roomid, oldStage, newStage) {
+      const result = await Room.update(
+        { stage: newStage },
+        {
+          where: {
+            id: roomid,
+            stage: oldStage
+          }
+        }
+      )
+      return result[0] > 0
+    }
+
     async roomExists (roomid) {
       try {
         const room = await Room.findOne({ where: { id: roomid } })
@@ -245,6 +258,7 @@ module.exports = newSequelizeDatabase
 
 ///
 
+/*
 const chalk = require('chalk')
 
 function assert (actual, expected) {
@@ -304,3 +318,4 @@ async function test () {
 }
 
 //test()
+*/
