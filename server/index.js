@@ -60,10 +60,6 @@ schema.chatMsg = {
 schema.quizMusic = {
   msg: {
     buf: Joi.binary().required(),
-    epoch: Joi.number()
-      .integer()
-      .required()
-      .min(1551149658543),
     stoppable: Joi.boolean().required()
   },
   done: Joi.func().required()

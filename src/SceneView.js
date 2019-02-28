@@ -818,7 +818,7 @@ class SceneView extends Component {
   handleSendMusic = ({ music, title, stoppable }) => {
     this._emitAndChangeScene(
       'quiz-music',
-      { buf: music, epoch: Date.now(), stoppable },
+      { buf: music, stoppable },
       this.SCENE.SELECT_CORRECT_ANSWER,
       { music: music.buffer, answers: {}, answer: title }
     )
@@ -896,7 +896,7 @@ class SceneView extends Component {
   onQuizMusic = msg => {
     this._changeScene(this.SCENE.PLAY_MUSIC, {
       music: msg.buf,
-      timeStart: msg.epoch + 5 * 1000,
+      timeStart: Date.now() + 5 * 1000,
       stop: false
     })
   }
