@@ -18,11 +18,12 @@ Dockerを通して動かそうとするとPostgreSQLをどこで動かすかと�
 私は諦めました。
 
 非Dockerの場合は`yarn install --pure-lockfile`後に`src/config.js`と`server/config.js`を適当にいじってから、
+データベースを `createdb testdb` として作成し、
 
 - `yarn start`
 - `node server/index.js`
 
-です。
+です。そして `localhost:3000` にアクセス！
 
 ## License
 
