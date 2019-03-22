@@ -17,7 +17,8 @@ Socket.IO経由で行います。フロントエンドはReactです。
 Dockerを通して動かそうとするとPostgreSQLをどこで動かすかという問題に遭遇するので、どうにか解決してください。
 私は諦めました。
 
-非Dockerの場合は`yarn install --pure-lockfile`後に`src/config.js`と`server/config.js`を適当にいじってから、
+非Dockerの場合は`yarn install --pure-lockfile`後に
+クライアント側の設定 `src/config.js`とサーバー側の設定 `server/config.js`をいじってから、
 データベースを `createdb testdb` として作成し、
 
 - `yarn start`

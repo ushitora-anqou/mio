@@ -1,4 +1,6 @@
+// Configuration on development environment
 const dev = {
+  // Server's URL
   server_uri: 'localhost:4000',
   storage: sessionStorage
   //storage: localStorage
@@ -10,6 +12,7 @@ const test = {
 }
 */
 
+// Configuration on production environment
 const prod = {
   server_uri: undefined,
   storage: localStorage
