@@ -297,6 +297,7 @@ function ShareURL (props) {
 function PlayMusic (props) {
   const [source, setSource] = React.useState(null)
   const [startTime, setStartTime] = React.useState(null)
+  const [remainingTime, setRemainingTime] = React.useState(null)
 
   const handleClick = React.useCallback(() => {
     if (source) source.stop()
@@ -316,7 +317,9 @@ function PlayMusic (props) {
             when: audioMan.getCurrentTime() + milliDelay / 1000
           })
         )
-        setTimeout(() => setStartTime(audioMan.getCurrentTime()), milliDelay)
+        setTimeout(() => {
+          setStartTime(audioMan.getCurrentTime())
+        }, milliDelay)
         throughTimer = setTimeout(
           props.onThrough,
           milliDelay + buf.duration * 1000
@@ -337,6 +340,23 @@ function PlayMusic (props) {
     }
   }, [source])
 
+  // countdown timer
+  React.useEffect(() => {
+    let countdownTimer = null
+
+    if (source && startTime) {
+      countdownTimer = setInterval(() => {
+        setRemainingTime(
+          startTime + source.buffer.duration - audioMan.getCurrentTime()
+        )
+      }, 200)
+    }
+
+    return () => {
+      if (countdownTimer) clearInterval(countdownTimer)
+    }
+  }, [source, startTime])
+
   if (props.stopPlaying && source) {
     source.stop()
     setSource(null)
@@ -346,7 +366,15 @@ function PlayMusic (props) {
     <div className='PlayMusic'>
       {startTime ? (
         <>
-          {source ? <p>再生中</p> : <p>停止</p>}
+          {source ? (
+            remainingTime ? (
+              <p>残り{remainingTime.toFixed(0)}秒</p>
+            ) : (
+              <p>準備中</p>
+            )
+          ) : (
+            <p>停止</p>
+          )}
           <button onClick={handleClick}>
             <FontAwesomeIcon icon={['far', 'stop-circle']} />
           </button>
