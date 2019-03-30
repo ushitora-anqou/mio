@@ -16,6 +16,10 @@ schema.roomid = Joi.string().uuid('uuidv4')
 schema.uid = Joi.string().uuid('uuidv4')
 schema.password = Joi.string().uuid('uuidv4')
 schema.time = Joi.number().min(0)
+schema.allotment = Joi.number()
+  .integer()
+  .min(-128)
+  .max(127)
 schema.roomExists = {
   msg: {
     roomid: schema.roomid.required()
@@ -25,16 +29,8 @@ schema.roomExists = {
 schema.createRoom = {
   param: {
     masterName: schema.name.required(),
-    correctPoint: Joi.number()
-      .integer()
-      .min(-128)
-      .max(127)
-      .required(),
-    wrongPoint: Joi.number()
-      .integer()
-      .min(-128)
-      .max(127)
-      .required()
+    correctPoint: schema.allotment.required(),
+    wrongPoint: schema.allotment.required()
   },
   done: Joi.func().required()
 }
@@ -104,6 +100,13 @@ schema.changeScore = {
     peke: Joi.number()
       .min(-2147483648)
       .max(2147483647)
+  },
+  done: Joi.func().required()
+}
+schema.changeAllotment = {
+  msg: {
+    correctPoint: schema.allotment.required(),
+    wrongPoint: schema.allotment.required()
   },
   done: Joi.func().required()
 }
@@ -439,6 +442,24 @@ async function main () {
         await db.updateUser(msg.uid, { maru: msg.maru, peke: msg.peke })
 
         sendUserList()
+
+        done()
+      })
+
+      socket.on('change-allotment', async (msg, done) => {
+        if (!(!validate({ msg, done }, schema.changeAllotment) && isMaster)) {
+          log('change-allotment failed')
+          return
+        }
+
+        log('change-allotment')
+
+        await db.updateAllotment(roomid, {
+          correctPoint: msg.correctPoint,
+          wrongPoint: msg.wrongPoint
+        })
+
+        sendQuizInfo()
 
         done()
       })

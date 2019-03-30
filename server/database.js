@@ -266,6 +266,10 @@ async function newSequelizeDatabase (url, options) {
     updateUser (uid, src) {
       return User.update(src, { where: { id: uid } })
     }
+
+    async updateAllotment (roomid, src) {
+      return Room.update(src, { where: { id: roomid } })
+    }
   }
 
   await User.sync()

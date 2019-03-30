@@ -109,6 +109,7 @@ class QuizRoom extends Component {
           <div>
             <ConnectionStatus />
             <QuizStatus round={this.state.round} point={this.state.point} />
+            {this.master && <AllotmentEditor socket={this.socket} />}
             <QuizHistory history={this.state.quizHistory} />
             <UserList
               users={this.state.users}
@@ -228,6 +229,39 @@ function QuizStatus (props) {
           </span>{' '}
         </>
       )}
+    </div>
+  )
+}
+
+function AllotmentEditor (props) {
+  const [sending, setSending] = React.useState(false)
+  const inputCorrect = React.useRef(null)
+  const inputWrong = React.useRef(null)
+
+  const handleSubmit = React.useCallback(e => {
+    e.preventDefault()
+
+    // treat blank value as 0
+    const correctPoint = Number(inputCorrect.current.value)
+    const wrongPoint = Number(inputWrong.current.value)
+
+    setSending(true)
+
+    props.socket.emit('change-allotment', { correctPoint, wrongPoint }, () => {
+      // clear
+      inputCorrect.current.value = ''
+      inputWrong.current.value = ''
+      setSending(false)
+    })
+  }, [])
+
+  return (
+    <div className='AllotmentEditor'>
+      <form onSubmit={handleSubmit}>
+        <input type='number' ref={inputCorrect} placeholder='○' />
+        <input type='number' ref={inputWrong} placeholder='×' />
+        <button disabled={sending}>配点変更</button>
+      </form>
     </div>
   )
 }

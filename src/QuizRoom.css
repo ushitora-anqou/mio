@@ -111,6 +111,14 @@
   overflow: hidden;
 }
 
+.AllotmentEditor form {
+  width: 400px;
+  margin: 10px;
+  display: grid;
+  grid-template-columns: 60px 60px 1fr;
+  grid-template-rows: 30px;
+}
+
 .ScoreEditor form {
   width: 400px;
   margin: 10px;
