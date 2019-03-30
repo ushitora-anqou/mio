@@ -222,7 +222,7 @@ class SelectMusic extends Component {
 function WaitMusic (props) {
   return (
     <div className='WaitMusic'>
-      <p>問題曲が届くのを待っています……</p>
+      <p>次の問題が出されるのを待っています……</p>
       <ShareURL />
     </div>
   )
