@@ -96,10 +96,16 @@ schema.changeScore = {
     uid: schema.uid,
     maru: Joi.number()
       .min(-2147483648)
-      .max(2147483647),
+      .max(2147483647)
+      .required(),
     peke: Joi.number()
       .min(-2147483648)
       .max(2147483647)
+      .required(),
+    points: Joi.number()
+      .min(-2147483648)
+      .max(2147483647)
+      .required()
   },
   done: Joi.func().required()
 }
@@ -439,7 +445,11 @@ async function main () {
 
         log('change-score')
 
-        await db.updateUser(msg.uid, { maru: msg.maru, peke: msg.peke })
+        await db.updateUser(msg.uid, {
+          maru: msg.maru,
+          peke: msg.peke,
+          points: msg.points
+        })
 
         sendUserList()
 

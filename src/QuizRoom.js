@@ -264,6 +264,7 @@ function ScoreEditor (props) {
   const selectUser = React.useRef(null)
   const inputCorrect = React.useRef(null)
   const inputWrong = React.useRef(null)
+  const inputPoints = React.useRef(null)
 
   const handleSubmit = React.useCallback(e => {
     e.preventDefault()
@@ -272,15 +273,17 @@ function ScoreEditor (props) {
     // treat blank value as 0
     const maru = Number(inputCorrect.current.value)
     const peke = Number(inputWrong.current.value)
+    const points = Number(inputPoints.current.value)
     if (!isPrintable(uid)) return
 
     setSending(true)
 
-    props.socket.emit('change-score', { uid, maru, peke }, () => {
+    props.socket.emit('change-score', { uid, maru, peke, points }, () => {
       // clear
       selectUser.current.value = ''
       inputCorrect.current.value = ''
       inputWrong.current.value = ''
+      inputPoints.current.value = ''
       setSending(false)
     })
   }, [])
@@ -299,6 +302,7 @@ function ScoreEditor (props) {
         </select>
         <input type='number' ref={inputCorrect} placeholder='○' />
         <input type='number' ref={inputWrong} placeholder='×' />
+        <input type='number' ref={inputPoints} placeholder='点数' />
         <button disabled={sending}>得点変更</button>
       </form>
     </div>
