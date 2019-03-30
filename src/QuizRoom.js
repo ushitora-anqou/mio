@@ -111,11 +111,7 @@ class QuizRoom extends Component {
             <QuizStatus round={this.state.round} point={this.state.point} />
             {this.master && <AllotmentEditor socket={this.socket} />}
             <QuizHistory history={this.state.quizHistory} />
-            <UserList
-              users={this.state.users}
-              myUid={this.uid}
-              point={this.state.point}
-            />
+            <UserList users={this.state.users} myUid={this.uid} />
             {this.master && (
               <ScoreEditor socket={this.socket} users={this.state.users} />
             )}
@@ -161,12 +157,11 @@ function UserList (props) {
           key={myUser.uid}
           user={myUser}
           className='UserListEntryMe'
-          point={props.point}
         />
       )}
       {props.users.map(user => {
         if (user.uid === props.myUid) return null
-        return <UserListEntry key={user.uid} user={user} point={props.point} />
+        return <UserListEntry key={user.uid} user={user} />
       })}
     </div>
   )
@@ -191,10 +186,8 @@ function UserListEntry (props) {
           <FontAwesomeIcon icon='times' />
         </span>
       )}
-      {!user.master && props.point && (
-        <span className='UserListEntryScore'>
-          {user.maru * props.point.correct + user.peke * props.point.wrong}
-        </span>
+      {!user.master && (
+        <span className='UserListEntryScore'>{user.points}</span>
       )}
     </div>
   )

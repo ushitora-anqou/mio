@@ -43,6 +43,11 @@ async function newSequelizeDatabase (url, options) {
       type: Sequelize.INTEGER,
       allowNull: false,
       defaultValue: 0
+    },
+    points: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      defaultValue: 0
     }
   })
 
@@ -235,7 +240,8 @@ async function newSequelizeDatabase (url, options) {
         online: !!user.socketId,
         master: master === user.id,
         maru: user.maru,
-        peke: user.peke
+        peke: user.peke,
+        points: user.points
       }))
     }
 
@@ -243,10 +249,21 @@ async function newSequelizeDatabase (url, options) {
       return User.findOne({ where: { id: uid } })
     }
 
-    async updateScore (uid, correct) {
+    async updateScore (uid, roomid, correct) {
       if (correct === undefined || correct === null) return
+
       const user = await this._getUser(uid)
-      return user.increment(correct ? 'maru' : 'peke')
+      const room = await this._getRoom(roomid)
+
+      if (correct) {
+        user.maru += 1
+        user.points += room.correctPoint
+        return user.save()
+      } else {
+        user.peke += 1
+        user.points += room.wrongPoint
+        return user.save()
+      }
     }
 
     async _getRoom (roomid) {
