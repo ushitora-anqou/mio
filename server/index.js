@@ -1,7 +1,7 @@
 const uuid = require('uuid/v4')
 const config = require('./config')
 const chalk = require('chalk')
-const Joi = require('joi')
+const Joi = require('@hapi/joi')
 
 function console_log (str) {
   config.noprint || console.log(chalk.yellow('[mio] ' + str))
