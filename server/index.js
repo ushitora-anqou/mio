@@ -1,7 +1,7 @@
 const uuid = require('uuid/v4')
 const config = require('./config')
 const chalk = require('chalk')
-const Joi = require('joi')
+const Joi = require('@hapi/joi')
 
 function console_log (str) {
   config.noprint || console.log(chalk.yellow('[mio] ' + str))
@@ -12,9 +12,10 @@ const schema = {}
 // 104
 // # Therefore the length of 128 is enough :)
 schema.name = Joi.string().max(128)
-schema.roomid = Joi.string().uuid('uuidv4')
-schema.uid = Joi.string().uuid('uuidv4')
-schema.password = Joi.string().uuid('uuidv4')
+// uuid() function is obsolete; use guid()
+schema.roomid = Joi.string().guid({version: ['uuidv4']})
+schema.uid = Joi.string().guid({version: ['uuidv4']})
+schema.password = Joi.string().guid({version: ['uuidv4']})
 schema.time = Joi.number().min(0)
 schema.allotment = Joi.number()
   .integer()
