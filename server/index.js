@@ -7,78 +7,78 @@ function console_log (str) {
   config.noprint || console.log(chalk.yellow('[mio] ' + str))
 }
 
-const schema = {}
+const schemaDefinition = {}
 // $ echo "寿限無寿限無五劫の擦り切れ海砂利水魚の水行末雲来末風来末食う寝る処に住む処藪ら柑子の藪柑子パイポパイポパイポのシューリンガンシューリンガンのグーリンダイグーリンダイのポンポコピーのポンポコナーの長久命の長助" | wc -m
 // 104
 // # Therefore the length of 128 is enough :)
-schema.name = Joi.string().max(128)
+schemaDefinition.name = Joi.string().max(128)
 // uuid() function is obsolete; use guid()
-schema.roomid = Joi.string().guid({version: ['uuidv4']})
-schema.uid = Joi.string().guid({version: ['uuidv4']})
-schema.password = Joi.string().guid({version: ['uuidv4']})
-schema.time = Joi.number().min(0)
-schema.allotment = Joi.number()
+schemaDefinition.roomid = Joi.string().guid({version: ['uuidv4']})
+schemaDefinition.uid = Joi.string().guid({version: ['uuidv4']})
+schemaDefinition.password = Joi.string().guid({version: ['uuidv4']})
+schemaDefinition.time = Joi.number().min(0)
+schemaDefinition.allotment = Joi.number()
   .integer()
   .min(-128)
   .max(127)
-schema.roomExists = {
+schemaDefinition.roomExists = {
   msg: {
-    roomid: schema.roomid.required()
+    roomid: schemaDefinition.roomid.required()
   },
   done: Joi.func().required()
 }
-schema.createRoom = {
+schemaDefinition.createRoom = {
   param: {
-    masterName: schema.name.required(),
-    correctPoint: schema.allotment.required(),
-    wrongPoint: schema.allotment.required()
+    masterName: schemaDefinition.name.required(),
+    correctPoint: schemaDefinition.allotment.required(),
+    wrongPoint: schemaDefinition.allotment.required()
   },
   done: Joi.func().required()
 }
-schema.issueUid = {
+schemaDefinition.issueUid = {
   param: {
-    roomid: schema.roomid.required(),
-    name: schema.name.required()
+    roomid: schemaDefinition.roomid.required(),
+    name: schemaDefinition.name.required()
   },
   done: Joi.func().required()
 }
-schema.auth = {
-  uid: schema.uid.required(),
-  password: schema.password.required(),
-  roomid: schema.roomid.required()
+schemaDefinition.auth = {
+  uid: schemaDefinition.uid.required(),
+  password: schemaDefinition.password.required(),
+  roomid: schemaDefinition.roomid.required()
 }
-schema.chatMsg = {
+schemaDefinition.chatMsg = {
   msg: {
     tag: Joi.string().required(),
     body: Joi.string().required()
   },
   done: Joi.func().required()
 }
-schema.quizMusic = {
+schemaDefinition.quizMusic = {
   msg: {
     buf: Joi.binary().required(),
     stoppable: Joi.boolean().required()
   },
   done: Joi.func().required()
 }
-schema.quizAnswer = {
+schemaDefinition.quizAnswer = {
   msg: {
     answer: Joi.string().allow(null),
-    time: schema.time.required()
+    time: schemaDefinition.time.required()
   },
   done: Joi.func().required()
 }
-schema.quizResult = {
+schemaDefinition.quizResult = {
   msg: {
     answer: Joi.string().required(),
     answers: Joi.object().unknown(true)
   },
   done: Joi.func().required()
 }
-schema.quizResultAnswer = {
-  uid: schema.uid.required(),
-  name: schema.name.required(),
-  time: schema.time.required(),
+schemaDefinition.quizResultAnswer = {
+  uid: schemaDefinition.uid.required(),
+  name: schemaDefinition.name.required(),
+  time: schemaDefinition.time.required(),
   answer: Joi.any().when('judge', {
     is: Joi.exist(),
     then: Joi.string().required(),
@@ -86,15 +86,15 @@ schema.quizResultAnswer = {
   }),
   judge: Joi.boolean()
 }
-schema.quizReset = {
+schemaDefinition.quizReset = {
   msg: {
     message: Joi.string()
   },
   done: Joi.func().required()
 }
-schema.changeScore = {
+schemaDefinition.changeScore = {
   msg: {
-    uid: schema.uid,
+    uid: schemaDefinition.uid,
     maru: Joi.number()
       .min(-2147483648)
       .max(2147483647)
@@ -110,21 +110,23 @@ schema.changeScore = {
   },
   done: Joi.func().required()
 }
-schema.changeAllotment = {
+schemaDefinition.changeAllotment = {
   msg: {
-    correctPoint: schema.allotment.required(),
-    wrongPoint: schema.allotment.required()
+    correctPoint: schemaDefinition.allotment.required(),
+    wrongPoint: schemaDefinition.allotment.required()
   },
   done: Joi.func().required()
 }
 
-function validate (value, schema) {
+function validate (value, schemaDefinition) {
   if (!value) {
     console_log('validation failed: value is evaluated to be false')
     return false
   }
 
-  const result = Joi.validate(value, schema, { convert: false })
+  const schema = Joi.compile(schemaDefinition)
+
+  const result = schema.validate(value, { convert: false })
   if (result.error) console_log(`validation failed: ${result.error}`)
   return !!result.error
 }
@@ -175,7 +177,7 @@ async function main () {
 
     socket.on('create-room', async (param, done) => {
       if (
-        !(!alreadyIssuedUid && !validate({ param, done }, schema.createRoom))
+        !(!alreadyIssuedUid && !validate({ param, done }, schemaDefinition.createRoom))
       ) {
         glog('create-room failed')
         return
@@ -196,7 +198,7 @@ async function main () {
     })
 
     socket.on('room-exists', async (msg, done) => {
-      if (validate({ msg, done }, schema.roomExists)) {
+      if (validate({ msg, done }, schemaDefinition.roomExists)) {
         done(false)
         return
       }
@@ -206,7 +208,7 @@ async function main () {
     })
 
     socket.on('issue-uid', async (param, done) => {
-      if (!(!alreadyIssuedUid && !validate({ param, done }, schema.issueUid))) {
+      if (!(!alreadyIssuedUid && !validate({ param, done }, schemaDefinition.issueUid))) {
         glog('issue-uid failed')
         return
       }
@@ -233,7 +235,7 @@ async function main () {
     socket.emit('auth', {}, async (uid, password, roomid) => {
       // set sid if auth is correct
       try {
-        if (validate({ uid, password, roomid }, schema.auth))
+        if (validate({ uid, password, roomid }, schemaDefinition.auth))
           throw new Error('validation failed')
         if (await db.setSidIf(uid, password, roomid, socket.id))
           throw new Error('invalid authentication')
@@ -305,7 +307,7 @@ async function main () {
       sendQuizInfo()
 
       socket.on('chat-msg', (msg, done) => {
-        if (validate({ msg, done }, schema.chatMsg)) {
+        if (validate({ msg, done }, schemaDefinition.chatMsg)) {
           glog('chat-msg failed')
           return
         }
@@ -318,7 +320,7 @@ async function main () {
       socket.on('quiz-music', async (msg, done) => {
         if (
           !(
-            !validate({ msg, done }, schema.quizMusic) &&
+            !validate({ msg, done }, schemaDefinition.quizMusic) &&
             (await db.isRoomStage(roomid, STAGE.WAITING_QUIZ_MUSIC)) &&
             isMaster
           )
@@ -363,7 +365,7 @@ async function main () {
 
         if (
           !(
-            !validate({ msg, done }, schema.quizAnswer) &&
+            !validate({ msg, done }, schemaDefinition.quizAnswer) &&
             (await db.isRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER)) &&
             master !== undefined &&
             !isMaster
@@ -388,11 +390,11 @@ async function main () {
       socket.on('quiz-result', async (msg, done) => {
         if (
           !(
-            !validate({ msg, done }, schema.quizResult) &&
+            !validate({ msg, done }, schemaDefinition.quizResult) &&
             Object.keys(msg.answers).every(
               uid =>
-                !validate(uid, schema.uid) &&
-                !validate(msg.answers[uid], schema.quizResultAnswer)
+                !validate(uid, schemaDefinition.uid) &&
+                !validate(msg.answers[uid], schemaDefinition.quizResultAnswer)
             ) &&
             ((await db.isRoomStage(roomid, STAGE.WAITING_STOP_MUSIC)) ||
               (await db.isRoomStage(roomid, STAGE.WAITING_QUIZ_ANSWER))) &&
@@ -416,7 +418,7 @@ async function main () {
 
       socket.on('quiz-reset', async (msg, done) => {
         try {
-          if (validate({ msg, done }, schema.quizReset) && isMaster)
+          if (validate({ msg, done }, schemaDefinition.quizReset) && isMaster)
             throw new Error('validation failed')
           if (
             await db.updateRoomStageIf(
@@ -439,7 +441,7 @@ async function main () {
       })
 
       socket.on('change-score', async (msg, done) => {
-        if (!(!validate({ msg, done }, schema.changeScore) && isMaster)) {
+        if (!(!validate({ msg, done }, schemaDefinition.changeScore) && isMaster)) {
           log('change-score failed')
           return
         }
@@ -458,7 +460,7 @@ async function main () {
       })
 
       socket.on('change-allotment', async (msg, done) => {
-        if (!(!validate({ msg, done }, schema.changeAllotment) && isMaster)) {
+        if (!(!validate({ msg, done }, schemaDefinition.changeAllotment) && isMaster)) {
           log('change-allotment failed')
           return
         }
